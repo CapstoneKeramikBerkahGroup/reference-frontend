@@ -13,12 +13,24 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DocumentDetail from './pages/DocumentDetail';
 import Visualization from './pages/Visualization';
+import DosenDashboard from './pages/DosenDashboard';
+import DosenMahasiswaDokumen from './pages/DosenMahasiswaDokumen';
+import DosenDokumenDetail from './pages/DosenDokumenDetail';
 
-// Protected Route Component (Opsional: untuk keamanan)
-// Jika user belum login, tendang ke halaman login
+// Protected Route Component
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token'); // Atau gunakan context jika ada
+  const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" />;
+};
+
+// Smart Root Redirect based on user role
+const RootRedirect = () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  if (user.role === 'dosen') {
+    return <Navigate to="/dosen/dashboard" replace />;
+  }
+  return <Navigate to="/dashboard" replace />;
 };
 
 const queryClient = new QueryClient();
@@ -37,7 +49,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
 
-              {/* Protected Routes (Halaman Utama) */}
+              {/* Protected Routes - Mahasiswa */}
               <Route 
                 path="/dashboard" 
                 element={
@@ -64,9 +76,37 @@ const App = () => {
                   </PrivateRoute>
                 } 
               />
+              
+              {/* Protected Routes - Dosen */}
+              <Route 
+                path="/dosen/dashboard" 
+                element={
+                  <PrivateRoute>
+                    <DosenDashboard />
+                  </PrivateRoute>
+                } 
+              />
+              
+              <Route 
+                path="/dosen/mahasiswa/:mahasiswaId/dokumen" 
+                element={
+                  <PrivateRoute>
+                    <DosenMahasiswaDokumen />
+                  </PrivateRoute>
+                } 
+              />
+              
+              <Route 
+                path="/dosen/dokumen/:dokumenId" 
+                element={
+                  <PrivateRoute>
+                    <DosenDokumenDetail />
+                  </PrivateRoute>
+                } 
+              />
 
-              {/* Default Redirect */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Default Redirect - Smart based on role */}
+              <Route path="/" element={<RootRedirect />} />
               
               {/* 404 Catch-all */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

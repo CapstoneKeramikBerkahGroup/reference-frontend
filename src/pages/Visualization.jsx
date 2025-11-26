@@ -1,30 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box, AppBar, Toolbar, Typography, Button, Container, Paper,
-  IconButton, Slider, TextField, MenuItem, CircularProgress,
-  Alert, Card, CardContent, Grid, Chip
-} from '@mui/material';
-import { ArrowBack, Refresh, ZoomIn, ZoomOut, CenterFocusStrong } from '@mui/icons-material';
+
+// --- 1. Import Komponen Shadcn UI ---
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider'; // Pastikan Anda punya komponen Slider di ui/slider.jsx
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+// --- 2. Import Icons & API ---
+import { 
+  ArrowLeft, RefreshCw, ZoomIn, ZoomOut, 
+  Maximize, Share2, Info, AlertCircle, FileText 
+} from 'lucide-react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import { visualizationAPI, documentsAPI } from '../services/api';
 
 const Visualization = () => {
   const navigate = useNavigate();
   const cyRef = useRef(null);
+  
+  // State
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [graphData, setGraphData] = useState({ nodes: [], edges: [] });
-  const [threshold, setThreshold] = useState(0.3);  // Start with lower threshold
+  const [threshold, setThreshold] = useState([0.3]); // Slider shadcn biasanya return array
   const [selectedNode, setSelectedNode] = useState(null);
   const [documents, setDocuments] = useState([]);
 
+  // --- Data Loading Logic ---
   useEffect(() => {
-    // Debounce threshold changes to avoid too many requests
     const timeoutId = setTimeout(() => {
       loadVisualization();
     }, 500);
-    
     return () => clearTimeout(timeoutId);
   }, [threshold]);
 
@@ -45,24 +53,19 @@ const Visualization = () => {
     setLoading(true);
     setError('');
     try {
+      // Ambil value threshold (jika array ambil index 0)
+      const thVal = Array.isArray(threshold) ? threshold[0] : threshold;
+      
       const response = await visualizationAPI.getSimilarityGraph({
-        min_similarity: threshold
+        min_similarity: thVal
       });
       
       const data = response.data;
       
-      // Check if we have valid data
-      if (!data || !data.nodes) {
-        throw new Error('Invalid response from server');
-      }
+      if (!data || !data.nodes) throw new Error('Invalid response from server');
       
-      // Convert to Cytoscape format
       const nodes = data.nodes.map(node => ({
-        data: {
-          id: node.id.toString(),
-          label: node.label,
-          ...node
-        }
+        data: { id: node.id.toString(), label: node.label, ...node }
       }));
 
       const edges = (data.edges || []).map((edge, index) => {
@@ -79,69 +82,67 @@ const Visualization = () => {
       });
 
       setGraphData({ nodes, edges });
-      
-      // Log for debugging
-      console.log(`📊 Graph loaded: ${nodes.length} nodes, ${edges.length} edges (threshold: ${threshold})`);
-      
     } catch (err) {
       console.error('Visualization error:', err);
       const errorMsg = err.response?.data?.detail || err.message || 'Failed to load visualization';
-      setError(errorMsg + ' Please make sure you have at least 2 processed documents.');
+      setError(errorMsg + ' Ensure you have at least 2 processed documents.');
     } finally {
       setLoading(false);
     }
   };
 
+  // --- Graph Config ---
   const cytoscapeStylesheet = [
     {
       selector: 'node',
       style: {
-        'background-color': '#3f51b5',
+        'background-color': '#0ea5e9', // Sky-500 (Primary Blue)
         'label': 'data(label)',
-        'color': '#ffffff',
-        'text-valign': 'center',
-        'text-halign': 'center',
-        'font-size': '14px',
-        'font-weight': 'bold',
-        'width': 60,
-        'height': 60,
+        'color': '#1e293b', // Slate-800
+        'text-valign': 'bottom',
+        'text-margin-y': 8,
+        'font-size': '12px',
+        'font-weight': '600',
+        'width': 40,
+        'height': 40,
         'text-wrap': 'wrap',
-        'text-max-width': '100px',
-        'text-outline-color': '#000000',
-        'text-outline-width': 2,
-        'text-outline-opacity': 0.8
+        'text-max-width': '120px',
+        'border-width': 2,
+        'border-color': '#ffffff',
+        'overlay-padding': '6px',
+        'z-index': 10
       }
     },
     {
       selector: 'node:selected',
       style: {
-        'background-color': '#f50057',
-        'width': 80,
-        'height': 80,
-        'border-width': 3,
-        'border-color': '#fff'
+        'background-color': '#f43f5e', // Rose-500
+        'width': 50,
+        'height': 50,
+        'border-width': 4,
+        'border-color': '#fecdd3', // Rose-200
+        'shadow-blur': 10,
+        'shadow-color': '#000'
       }
     },
     {
       selector: 'edge',
       style: {
-        'width': (ele) => ele.data('similarity') * 10,
-        'line-color': '#9e9e9e',
-        'target-arrow-color': '#9e9e9e',
-        'target-arrow-shape': 'triangle',
+        'width': (ele) => Math.max(1, ele.data('similarity') * 5),
+        'line-color': '#cbd5e1', // Slate-300
+        'target-arrow-color': '#cbd5e1',
+        'target-arrow-shape': 'none',
         'curve-style': 'bezier',
-        'label': 'data(label)',
-        'font-size': '10px',
-        'text-background-color': '#fff',
-        'text-background-opacity': 0.8,
-        'text-background-padding': '2px'
+        'opacity': 0.8
       }
     },
     {
       selector: 'edge:selected',
       style: {
-        'line-color': '#f50057',
-        'target-arrow-color': '#f50057'
+        'line-color': '#f43f5e',
+        'width': 4,
+        'opacity': 1,
+        'z-index': 9
       }
     }
   ];
@@ -149,12 +150,12 @@ const Visualization = () => {
   const layout = {
     name: 'cose',
     animate: true,
-    animationDuration: 1000,
-    idealEdgeLength: 150,
+    animationDuration: 800,
+    idealEdgeLength: 100,
     nodeOverlap: 20,
     refresh: 20,
     fit: true,
-    padding: 30,
+    padding: 50,
     randomize: false,
     componentSpacing: 100,
     nodeRepulsion: 400000,
@@ -167,299 +168,201 @@ const Visualization = () => {
     minTemp: 1.0
   };
 
+  // --- Handlers ---
   const handleNodeClick = (event) => {
     const node = event.target;
-    const nodeData = node.data();
-    setSelectedNode(nodeData);
+    setSelectedNode(node.data());
   };
 
-  const handleZoomIn = () => {
+  const handleZoom = (factor) => {
     if (cyRef.current) {
-      cyRef.current.zoom(cyRef.current.zoom() * 1.2);
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (cyRef.current) {
-      cyRef.current.zoom(cyRef.current.zoom() * 0.8);
+      const zoom = cyRef.current.zoom();
+      cyRef.current.zoom(zoom * factor);
     }
   };
 
   const handleCenter = () => {
-    if (cyRef.current) {
-      cyRef.current.fit();
-    }
+    if (cyRef.current) cyRef.current.fit();
   };
 
-  const handleRefresh = () => {
-    loadVisualization();
-  };
-
+  // --- Render UI ---
   return (
-    <Box>
-      {/* AppBar */}
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/dashboard')}>
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
-            Document Similarity Visualization
-          </Typography>
-          <IconButton color="inherit" onClick={handleRefresh}>
-            <Refresh />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="xl" sx={{ mt: 2, mb: 4 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Similarity Threshold Control - Full Width Horizontal */}
-        <Paper elevation={3} sx={{ p: 3, mb: 3, bgcolor: 'background.paper' }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 2 }}>
-            📊 Similarity Filter
-          </Typography>
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background flex flex-col">
+      
+      {/* Header */}
+      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50 h-16">
+        <div className="container h-full mx-auto px-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Dashboard
+            </Button>
+            <div className="h-6 w-px bg-border/50"></div>
+            <h1 className="text-lg font-serif font-semibold">Knowledge Graph</h1>
+          </div>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {/* Slider - Takes most space */}
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Button variant="outline" size="sm" onClick={() => loadVisualization()} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex-1 container mx-auto px-4 py-6 overflow-hidden flex flex-col lg:flex-row gap-6 h-[calc(100vh-64px)]">
+        
+        {/* Left Sidebar: Controls & Info */}
+        <div className="w-full lg:w-80 flex flex-col gap-6 overflow-y-auto pb-6 h-full">
+          
+          {/* Error Alert */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Threshold Control */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Share2 className="w-4 h-4 text-primary" />
+                Similarity Threshold
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-muted-foreground">Loose</span>
+                <Badge variant="secondary" className="font-mono">
+                  {((Array.isArray(threshold) ? threshold[0] : threshold) * 100).toFixed(0)}%
+                </Badge>
+                <span className="text-xs text-muted-foreground">Strict</span>
+              </div>
               <Slider
-                value={threshold}
-                onChange={(e, val) => setThreshold(val)}
-                min={0}
+                defaultValue={[0.3]}
                 max={1}
                 step={0.05}
-                marks={[
-                  { value: 0, label: '0%' },
-                  { value: 0.1, label: '10%' },
-                  { value: 0.2, label: '20%' },
-                  { value: 0.3, label: '30%' },
-                  { value: 0.4, label: '40%' },
-                  { value: 0.5, label: '50%' },
-                  { value: 0.6, label: '60%' },
-                  { value: 0.7, label: '70%' },
-                  { value: 0.8, label: '80%' },
-                  { value: 0.9, label: '90%' },
-                  { value: 1.0, label: '100%' }
-                ]}
-                valueLabelDisplay="on"
-                valueLabelFormat={(value) => `${(value * 100).toFixed(0)}%`}
-                sx={{ 
-                  height: 8,
-                  '& .MuiSlider-thumb': {
-                    height: 24,
-                    width: 24,
-                    '&:hover, &.Mui-focusVisible': {
-                      boxShadow: '0px 0px 0px 8px rgba(63, 81, 181, 0.16)',
-                    },
-                  },
-                  '& .MuiSlider-valueLabel': {
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                    backgroundColor: 'primary.main',
-                  },
-                  '& .MuiSlider-track': {
-                    height: 8,
-                  },
-                  '& .MuiSlider-rail': {
-                    height: 8,
-                    opacity: 0.3,
-                  },
-                  '& .MuiSlider-mark': {
-                    height: 12,
-                    width: 2,
-                    backgroundColor: 'currentColor',
-                  },
-                  '& .MuiSlider-markLabel': {
-                    fontSize: 12,
-                    fontWeight: 500,
-                  },
-                }}
+                value={Array.isArray(threshold) ? threshold : [threshold]}
+                onValueChange={(val) => setThreshold(val)}
+                className="w-full"
               />
-            </Box>
+              <p className="text-xs text-muted-foreground mt-4">
+                Adjust to filter connections. Higher values show only stronger relationships.
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Status Chip - Fixed width */}
-            <Box sx={{ flexShrink: 0, textAlign: 'center', minWidth: 200 }}>
-              <Chip 
-                label={`${(threshold * 100).toFixed(0)}% Match`}
-                color="primary" 
-                sx={{ 
-                  fontSize: 16, 
-                  fontWeight: 'bold',
-                  height: 36,
-                  px: 2,
-                  mb: 0.5,
-                }}
-              />
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {threshold < 0.2 && '💡 Very loose'}
-                {threshold >= 0.2 && threshold < 0.4 && '📊 Loose'}
-                {threshold >= 0.4 && threshold < 0.6 && '✅ Moderate'}
-                {threshold >= 0.6 && threshold < 0.8 && '🎯 Strict'}
-                {threshold >= 0.8 && '⭐ Very strict'}
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-
-        {/* Graph and Statistics - Landscape Layout */}
-        <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 280px)' }}>
-          {/* Main Graph - Takes 80% width */}
-          <Paper sx={{ flexGrow: 1, flexBasis: '80%', p: 2, position: 'relative', overflow: 'hidden' }}>
-
-            {loading ? (
-              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                <CircularProgress size={60} />
-              </Box>
-            ) : graphData.nodes.length === 0 ? (
-              <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  No Data Available
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Upload documents and process them to see the similarity network
-                </Typography>
-                </Box>
-              ) : (
-                <>
-                  <CytoscapeComponent
-                    elements={[...graphData.nodes, ...graphData.edges]}
-                    style={{ width: '100%', height: 'calc(100% - 20px)' }}
-                    stylesheet={cytoscapeStylesheet}
-                    layout={layout}
-                    cy={(cy) => {
-                      cyRef.current = cy;
-                      cy.on('tap', 'node', handleNodeClick);
-                    }}
-                  />
+          {/* Selected Node Info */}
+          <Card className="flex-1 flex flex-col min-h-[200px]">
+            <CardHeader className="pb-3 bg-accent/5">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Info className="w-4 h-4 text-primary" />
+                Node Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 pt-4 overflow-y-auto">
+              {selectedNode ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg leading-tight mb-1">
+                      {selectedNode.label}
+                    </h3>
+                    <Badge variant="outline" className="mt-1">ID: {selectedNode.id}</Badge>
+                  </div>
                   
-                  {/* Zoom Controls */}
-                  <Box sx={{ position: 'absolute', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <IconButton
-                      onClick={handleZoomIn}
-                      sx={{ bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
+                  <div className="space-y-2">
+                    <Button 
+                      className="w-full justify-start" 
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(`/documents/${selectedNode.id}`)}
                     >
-                      <ZoomIn />
-                    </IconButton>
-                    <IconButton
-                      onClick={handleZoomOut}
-                      sx={{ bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
-                    >
-                      <ZoomOut />
-                    </IconButton>
-                    <IconButton
-                      onClick={handleCenter}
-                      sx={{ bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
-                    >
-                      <CenterFocusStrong />
-                    </IconButton>
-                  </Box>
-                </>
+                      <FileText className="w-4 h-4 mr-2" /> View Document
+                    </Button>
+                  </div>
+
+                  {selectedNode.tags && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Tags</p>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedNode.tags.map((tag, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground">
+                  <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-3">
+                    <Share2 className="w-6 h-6 opacity-50" />
+                  </div>
+                  <p className="text-sm">Click on a node to view details</p>
+                </div>
               )}
-          </Paper>
+            </CardContent>
+          </Card>
 
-          {/* Statistics Panel - Takes 20% width */}
-          <Paper sx={{ flexShrink: 0, flexBasis: '20%', p: 2, overflowY: 'auto' }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              📊 Graph Statistics
-            </Typography>
-              
-              <Card variant="outlined" sx={{ mb: 2, bgcolor: 'primary.50' }}>
-                <CardContent>
-                  <Typography variant="h3" color="primary" sx={{ fontWeight: 'bold', textAlign: 'center' }}>
-                    {graphData.nodes.length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Documents
-                  </Typography>
-                </CardContent>
-              </Card>
+          {/* Stats Mini Card */}
+          <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-primary">{graphData.nodes.length}</p>
+                <p className="text-xs text-muted-foreground">Papers</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold text-primary">{graphData.edges.length}</p>
+                <p className="text-xs text-muted-foreground">Links</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
-              <Card variant="outlined" sx={{ mb: 2, bgcolor: graphData.edges.length > 0 ? 'success.50' : 'warning.50' }}>
-                <CardContent>
-                  <Typography variant="h3" color={graphData.edges.length > 0 ? 'success.main' : 'warning.main'} sx={{ fontWeight: 'bold', textAlign: 'center' }}>
-                    {graphData.edges.length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Connections
-                  </Typography>
-                </CardContent>
-              </Card>
+        {/* Right Area: Graph Canvas */}
+        <Card className="flex-1 relative overflow-hidden border-border/50 shadow-sm bg-white/50">
+          {/* Canvas */}
+          <div className="absolute inset-0">
+            {loading ? (
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-sm text-muted-foreground">Rendering graph...</p>
+                </div>
+              </div>
+            ) : (
+              <CytoscapeComponent
+                elements={[...graphData.nodes, ...graphData.edges]}
+                style={{ width: '100%', height: '100%' }}
+                stylesheet={cytoscapeStylesheet}
+                layout={layout}
+                cy={(cy) => {
+                  cyRef.current = cy;
+                  cy.on('tap', 'node', handleNodeClick);
+                  cy.on('tap', (e) => {
+                    if (e.target === cy) setSelectedNode(null);
+                  });
+                }}
+              />
+            )}
+          </div>
 
-              {graphData.edges.length === 0 && graphData.nodes.length >= 2 && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Typography variant="caption">
-                    💡 No connections at {(threshold * 100).toFixed(0)}% threshold. 
-                    Try lowering the slider to see more connections.
-                  </Typography>
-                </Alert>
-              )}
+          {/* Floating Controls */}
+          <div className="absolute bottom-6 right-6 flex flex-col gap-2 shadow-lg bg-card rounded-lg p-1 border border-border/50">
+            <Button variant="ghost" size="icon" onClick={() => handleZoom(1.2)} title="Zoom In">
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => handleZoom(0.8)} title="Zoom Out">
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <div className="h-px w-full bg-border/50 my-1"></div>
+            <Button variant="ghost" size="icon" onClick={handleCenter} title="Fit to Screen">
+              <Maximize className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
 
-              {graphData.nodes.length < 2 && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  <Typography variant="caption">
-                    ⚠️ Upload and process at least 2 documents to see similarity analysis.
-                  </Typography>
-                </Alert>
-              )}
-
-              {selectedNode && (
-                <>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Selected Document
-                  </Typography>
-                  <Card variant="outlined" sx={{ mb: 2 }}>
-                    <CardContent>
-                      <Typography variant="subtitle1" gutterBottom>
-                        {selectedNode.label}
-                      </Typography>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => navigate(`/documents/${selectedNode.id}`)}
-                        sx={{ mt: 1 }}
-                      >
-                        View Details
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                All Documents
-              </Typography>
-              {documents.slice(0, 10).map((doc) => (
-                <Card
-                  key={doc.id}
-                  variant="outlined"
-                  sx={{
-                    mb: 1,
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'action.hover' }
-                  }}
-                  onClick={() => navigate(`/documents/${doc.id}`)}
-                >
-                  <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                    <Typography variant="body2" noWrap>
-                      {doc.judul}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {doc.status_analisis || 'pending'}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ))}
-          </Paper>
-        </Box>
-      </Container>
-    </Box>
+      </main>
+    </div>
   );
 };
 

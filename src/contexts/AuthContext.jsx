@@ -13,7 +13,8 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Loading state penting agar UI tidak 'loncat' ke halaman login saat cek token
+  const [loading, setLoading] = useState(true); 
 
   useEffect(() => {
     checkAuth();
@@ -23,40 +24,54 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
+        // Verifikasi token ke backend
         const response = await authAPI.getMe();
         setUser(response.data);
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Jika token invalid/expired, bersihkan
+        logout();
       }
     }
     setLoading(false);
   };
 
   const login = async (credentials) => {
-    const formData = new URLSearchParams();
-    formData.append('username', credentials.email);
-    formData.append('password', credentials.password);
-    
-    const response = await authAPI.login(formData);
-    const { access_token } = response.data;
-    
-    localStorage.setItem('token', access_token);
-    
-    // Get user info
-    const userResponse = await authAPI.getMe();
-    setUser(userResponse.data);
-    localStorage.setItem('user', JSON.stringify(userResponse.data));
-    
-    return userResponse.data;
+    try {
+      // Backend FastAPI butuh Form Data untuk login (OAuth2 standard)
+      const formData = new URLSearchParams();
+      formData.append('username', credentials.email);
+      formData.append('password', credentials.password);
+      
+      const response = await authAPI.login(formData);
+      const { access_token } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      
+      // Setelah dapat token, ambil data user lengkap
+      const userResponse = await authAPI.getMe();
+      setUser(userResponse.data);
+      localStorage.setItem('user', JSON.stringify(userResponse.data));
+      
+      return userResponse.data;
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error; // Lempar error agar bisa ditangkap oleh UI (tampilkan alert)
+    }
   };
 
   const register = async (userData, role) => {
-    if (role === 'mahasiswa') {
-      await authAPI.registerMahasiswa(userData);
-    } else {
-      await authAPI.registerDosen(userData);
+    try {
+      if (role === 'mahasiswa') {
+        await authAPI.registerMahasiswa(userData);
+      } else if (role === 'dosen') {
+        await authAPI.registerDosen(userData);
+      } else {
+        throw new Error("Role tidak valid");
+      }
+    } catch (error) {
+      console.error("Register error:", error);
+      throw error;
     }
   };
 
@@ -64,6 +79,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    // Opsional: Redirect paksa ke login bisa dilakukan di komponen UI
   };
 
   const value = {
@@ -77,5 +93,10 @@ export const AuthProvider = ({ children }) => {
     isDosen: user?.role === 'dosen',
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {/* Tahan rendering anak sampai cek auth selesai agar tidak flicker */}
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };

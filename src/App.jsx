@@ -1,72 +1,81 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner'; // Notifikasi modern
+import { TooltipProvider } from '@/components/ui/tooltip'; // Pembungkus tooltip Shadcn
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Contexts
 import { AuthProvider } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import ErrorBoundary from './components/ErrorBoundary';
+
+// Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DocumentDetail from './pages/DocumentDetail';
 import Visualization from './pages/Visualization';
-import TestPage from './pages/TestPage';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#3f51b5',
-    },
-    secondary: {
-      main: '#f50057',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  },
-});
+// Protected Route Component (Opsional: untuk keamanan)
+// Jika user belum login, tendang ke halaman login
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem('token'); // Atau gunakan context jika ada
+  return token ? children : <Navigate to="/login" />;
+};
 
-function App() {
+const queryClient = new QueryClient();
+
+const App = () => {
   return (
-    <ErrorBoundary>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <AuthProvider>
-          <Router>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        {/* Toaster untuk menampilkan notifikasi (toast.success/error) di seluruh aplikasi */}
+        <Toaster />
+        
+        <BrowserRouter>
+          <AuthProvider>
             <Routes>
+              {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/test" element={<TestPage />} />
-              <Route
-                path="/dashboard"
+
+              {/* Protected Routes (Halaman Utama) */}
+              <Route 
+                path="/dashboard" 
                 element={
-                  <ProtectedRoute>
+                  <PrivateRoute>
                     <Dashboard />
-                  </ProtectedRoute>
-                }
+                  </PrivateRoute>
+                } 
               />
-              <Route
-                path="/documents/:id"
+              
+              <Route 
+                path="/documents/:id" 
                 element={
-                  <ProtectedRoute>
+                  <PrivateRoute>
                     <DocumentDetail />
-                  </ProtectedRoute>
-                }
+                  </PrivateRoute>
+                } 
               />
-              <Route
-                path="/visualization"
+              
+              <Route 
+                path="/visualization" 
                 element={
-                  <ProtectedRoute>
+                  <PrivateRoute>
                     <Visualization />
-                  </ProtectedRoute>
-                }
+                  </PrivateRoute>
+                } 
               />
+
+              {/* Default Redirect */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              
+              {/* 404 Catch-all */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
-          </Router>
-        </AuthProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
-}
+};
 
 export default App;

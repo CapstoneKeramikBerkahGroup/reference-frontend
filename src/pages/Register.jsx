@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import {
-  Container, Box, Paper, TextField, Button, Typography,
-  Alert, Tab, Tabs, Link, MenuItem
-} from '@mui/material';
+import { useNavigate, Link } from 'react-router-dom';
+
+// --- 1. Import Komponen UI Modern (Shadcn) ---
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// --- 2. Import Icons & Context ---
+import { BookOpen, AlertCircle, CheckCircle2, GraduationCap, UserCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  
+  // State Management (Sama seperti logika lama Anda)
   const [role, setRole] = useState('mahasiswa');
   const [formData, setFormData] = useState({
     // User data
@@ -29,11 +38,16 @@ const Register = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
+    // Validasi dasar
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -47,16 +61,20 @@ const Register = () => {
     setLoading(true);
 
     try {
+      // Persiapkan payload sesuai spesifikasi backend Anda
       const userData = {
         user: {
           email: formData.email,
           nama: formData.nama,
           password: formData.password,
-          role: role, // Add role field
+          role: role,
         },
       };
 
       if (role === 'mahasiswa') {
+        // Backend mengharapkan object terpisah atau digabung? 
+        // Berdasarkan kode lama Anda, Anda menggabung properties ke userData root
+        // Sesuaikan jika backend butuh struktur nested
         userData.nim = formData.nim;
         userData.program_studi = formData.program_studi;
         userData.angkatan = parseInt(formData.angkatan);
@@ -66,198 +84,239 @@ const Register = () => {
         userData.bidang_keahlian = formData.bidang_keahlian;
       }
 
+      // Panggil fungsi register dari AuthContext
       await register(userData, role);
       
-      // Show success message
       setSuccess('Registration successful! Redirecting to login...');
       
-      // Redirect after 2 seconds
+      // Redirect setelah 2 detik
       setTimeout(() => {
         navigate('/login', { state: { message: 'Registration successful! Please login.' } });
       }, 2000);
       
     } catch (err) {
       console.error('Registration error:', err);
+      // Tampilkan pesan error dari backend jika ada
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleRoleChange = (event, newValue) => {
-    setRole(newValue);
-    setError('');
-  };
-
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          py: 4,
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography variant="h4" align="center" gutterBottom>
-            Register
-          </Typography>
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex items-center justify-center p-4 py-12">
+      <div className="w-full max-w-xl">
+        {/* Logo & Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-lg shadow-primary/20">
+            <BookOpen className="w-8 h-8 text-primary-foreground" />
+          </div>
+          <h1 className="text-4xl font-serif font-bold text-foreground mb-2">Refero</h1>
+          <p className="text-muted-foreground">Your AI Research Companion</p>
+        </div>
 
-          <Tabs value={role} onChange={handleRoleChange} centered sx={{ mb: 3 }}>
-            <Tab label="Mahasiswa" value="mahasiswa" />
-            <Tab label="Dosen" value="dosen" />
-          </Tabs>
-
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {success}
-            </Alert>
-          )}
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            {/* Common Fields */}
-            <TextField
-              fullWidth
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Nama Lengkap"
-              name="nama"
-              value={formData.nama}
-              onChange={handleChange}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Confirm Password"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              margin="normal"
-              required
-            />
-
-            {/* Mahasiswa Specific Fields */}
-            {role === 'mahasiswa' && (
-              <>
-                <TextField
-                  fullWidth
-                  label="NIM"
-                  name="nim"
-                  value={formData.nim}
-                  onChange={handleChange}
-                  margin="normal"
-                  required
-                />
-                <TextField
-                  fullWidth
-                  label="Program Studi"
-                  name="program_studi"
-                  value={formData.program_studi}
-                  onChange={handleChange}
-                  margin="normal"
-                  required
-                />
-                <TextField
-                  fullWidth
-                  label="Angkatan"
-                  name="angkatan"
-                  type="number"
-                  value={formData.angkatan}
-                  onChange={handleChange}
-                  margin="normal"
-                  required
-                />
-              </>
+        <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-serif">Create Account</CardTitle>
+            <CardDescription>Choose your role to get started</CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {/* Alerts */}
+            {success && (
+              <Alert className="mb-6 border-green-200 bg-green-50 text-green-800">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
             )}
 
-            {/* Dosen Specific Fields */}
-            {role === 'dosen' && (
-              <>
-                <TextField
-                  fullWidth
-                  label="NIP"
-                  name="nip"
-                  value={formData.nip}
-                  onChange={handleChange}
-                  margin="normal"
-                  required
-                />
-                <TextField
-                  fullWidth
-                  label="Jabatan"
-                  name="jabatan"
-                  value={formData.jabatan}
-                  onChange={handleChange}
-                  margin="normal"
-                  required
-                />
-                <TextField
-                  fullWidth
-                  label="Bidang Keahlian"
-                  name="bidang_keahlian"
-                  value={formData.bidang_keahlian}
-                  onChange={handleChange}
-                  margin="normal"
-                  required
-                />
-              </>
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
-            <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              size="large"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? 'Registering...' : 'Register'}
-            </Button>
-          </form>
+            {/* Role Selection Tabs */}
+            <Tabs value={role} onValueChange={setRole} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="mahasiswa" className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4" />
+                  Student
+                </TabsTrigger>
+                <TabsTrigger value="dosen" className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4" />
+                  Lecturer
+                </TabsTrigger>
+              </TabsList>
 
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Typography variant="body2">
-              Already have an account?{' '}
-              <Link component={RouterLink} to="/login">
-                Login here
-              </Link>
-            </Typography>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Common Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nama">Full Name</Label>
+                    <Input
+                      id="nama"
+                      name="nama"
+                      placeholder="John Doe"
+                      value={formData.nama}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="john@university.ac.id"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Role Specific Fields */}
+                <TabsContent value="mahasiswa" className="space-y-4 mt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="nim">Student ID (NIM)</Label>
+                    <Input
+                      id="nim"
+                      name="nim"
+                      placeholder="120222..."
+                      value={formData.nim}
+                      onChange={handleChange}
+                      required={role === 'mahasiswa'}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="program_studi">Study Program</Label>
+                      <Input
+                        id="program_studi"
+                        name="program_studi"
+                        placeholder="Information Systems"
+                        value={formData.program_studi}
+                        onChange={handleChange}
+                        required={role === 'mahasiswa'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="angkatan">Year (Angkatan)</Label>
+                      <Input
+                        id="angkatan"
+                        name="angkatan"
+                        type="number"
+                        placeholder="2024"
+                        value={formData.angkatan}
+                        onChange={handleChange}
+                        required={role === 'mahasiswa'}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="dosen" className="space-y-4 mt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="nip">Lecturer ID (NIP)</Label>
+                    <Input
+                      id="nip"
+                      name="nip"
+                      placeholder="1985..."
+                      value={formData.nip}
+                      onChange={handleChange}
+                      required={role === 'dosen'}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="jabatan">Position</Label>
+                      <Input
+                        id="jabatan"
+                        name="jabatan"
+                        placeholder="Lecturer"
+                        value={formData.jabatan}
+                        onChange={handleChange}
+                        required={role === 'dosen'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bidang_keahlian">Expertise</Label>
+                      <Input
+                        id="bidang_keahlian"
+                        name="bidang_keahlian"
+                        placeholder="Data Science"
+                        value={formData.bidang_keahlian}
+                        onChange={handleChange}
+                        required={role === 'dosen'}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Password Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 text-base font-medium mt-6"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Creating Account...
+                    </div>
+                  ) : (
+                    'Register'
+                  )}
+                </Button>
+              </form>
+            </Tabs>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link to="/login" className="text-primary hover:text-primary/80 font-semibold hover:underline">
+                  Sign in here
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground/60 mt-8">
+          © 2025 Refero. Telkom University Capstone Project. Keramik Berkah Group.
+        </p>
+      </div>
+    </div>
   );
 };
 

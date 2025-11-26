@@ -60,13 +60,18 @@ export const documentsAPI = {
   
   getAll: (params) => api.get('/documents/', { params }),
   
-  getById: (id) => api.get(`/documents/${id}`),
+  getById: (id) => api.get(`/documents/doc/${id}`),
   
-  download: (id) => api.get(`/documents/download/${id}`, {
+  download: (id) => api.get(`/documents/doc/${id}/download`, {
     responseType: 'blob',
   }),
   
-  delete: (id) => api.delete(`/documents/${id}`),
+  downloadCompilation: (params = {}) => api.get('/documents/compilation/download', {
+    params,
+    responseType: 'blob',
+  }),
+  
+  delete: (id) => api.delete(`/documents/doc/${id}`),
   
   search: (query) => api.get('/documents/search', { params: { q: query } }),
 };
@@ -77,9 +82,9 @@ export const tagsAPI = {
   
   create: (name) => api.post('/documents/tags', { nama_tag: name }),
   
-  addToDocument: (documentId, tagId) => api.post(`/documents/${documentId}/tags/${tagId}`),
+  addToDocument: (documentId, tagId) => api.post(`/documents/doc/${documentId}/tags/${tagId}`),
   
-  removeFromDocument: (documentId, tagId) => api.delete(`/documents/${documentId}/tags/${tagId}`),
+  removeFromDocument: (documentId, tagId) => api.delete(`/documents/doc/${documentId}/tags/${tagId}`),
 };
 
 // ============= NLP API =============

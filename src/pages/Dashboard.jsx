@@ -132,6 +132,44 @@ const Dashboard = () => {
     }
   };
 
+  const handleDownloadCompilation = async () => {
+    if (documents.length === 0) {
+      toast.warning('No documents to compile');
+      return;
+    }
+
+    try {
+      toast.info('Generating compilation report... This may take a moment');
+      
+      const response = await documentsAPI.downloadCompilation();
+      
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `compilation_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Compilation report downloaded successfully! 📚');
+    } catch (err) {
+      console.error('Compilation error:', err);
+      
+      // Handle 401 specially (though interceptor should redirect)
+      if (err.response?.status === 401) {
+        toast.error('Session expired. Please login again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 1500);
+        return;
+      }
+      
+      toast.error(err.response?.data?.detail || err.message || 'Failed to generate compilation report');
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -274,6 +312,17 @@ const Dashboard = () => {
               className="pl-10 h-11 bg-card border-border/50"
             />
           </div>
+
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleDownloadCompilation}
+            disabled={documents.length === 0}
+            className="h-11"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Download Compilation ({documents.length})
+          </Button>
 
           <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
             <DialogTrigger asChild>

@@ -112,4 +112,27 @@ export const usersAPI = {
   getDosen: () => api.get('/users/dosen'),
 };
 
+// ============= DOSEN API =============
+export const dosenAPI = {
+  // Dashboard & Stats
+  getDashboardStats: () => api.get('/dosen/dashboard/stats'),
+  
+  // Mahasiswa Bimbingan
+  getMahasiswaBimbingan: () => api.get('/dosen/mahasiswa'),
+  getMahasiswaDocuments: (mahasiswaId) => api.get(`/dosen/mahasiswa/${mahasiswaId}/dokumen`),
+  
+  // Dokumen Detail
+  getDokumenDetail: (dokumenId) => api.get(`/dosen/dokumen/${dokumenId}`),
+  
+  // Catatan (Comments)
+  addCatatan: (dokumenId, data) => api.post(`/dosen/dokumen/${dokumenId}/catatan`, data),
+  getCatatan: (dokumenId) => api.get(`/dosen/dokumen/${dokumenId}/catatan`),
+  updateCatatan: (catatanId, data) => api.put(`/dosen/catatan/${catatanId}`, data),
+  deleteCatatan: (catatanId) => api.delete(`/dosen/catatan/${catatanId}`),
+  
+  // Validasi Referensi
+  validateReferensi: (referensiId, data) => api.put(`/dosen/referensi/${referensiId}/validate`, data),
+  getPendingReferensi: () => api.get('/dosen/referensi/pending'),
+};
+
 export default api;

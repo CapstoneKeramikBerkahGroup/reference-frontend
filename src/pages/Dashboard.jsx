@@ -110,9 +110,10 @@ const Dashboard = () => {
     try {
       await documentsAPI.delete(id);
       toast.success('Document deleted');
-      loadDocuments();
+      await loadDocuments();
     } catch (err) {
-      toast.error('Failed to delete document');
+      console.error('Delete error:', err);
+      toast.error(err.response?.data?.detail || 'Failed to delete document');
     }
   };
 

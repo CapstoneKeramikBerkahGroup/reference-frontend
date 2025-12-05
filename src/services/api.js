@@ -49,6 +49,18 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   
   logout: () => api.post('/auth/logout'),
+  
+  // CAPTCHA
+  getCaptcha: () => api.get('/auth/captcha'),
+  
+  loginWithCaptcha: (data) => api.post('/auth/login/captcha', data),
+  
+  // Forgot Password
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  
+  verifyCode: (email, code) => api.post('/auth/verify-code', { email, code }),
+  
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 // ============= DOCUMENTS API =============
@@ -117,6 +129,11 @@ export const dosenAPI = {
   // Dashboard & Stats
   getDashboardStats: () => api.get('/dosen/dashboard/stats'),
   
+  // Mahasiswa Assignment
+  getAvailableDosen: () => api.get('/dosen/available-dosen'),
+  assignMahasiswa: (mahasiswaId) => api.post(`/dosen/assign-mahasiswa/${mahasiswaId}`),
+  removeMahasiswa: (mahasiswaId) => api.delete(`/dosen/remove-mahasiswa/${mahasiswaId}`),
+  
   // Mahasiswa Bimbingan
   getMahasiswaBimbingan: () => api.get('/dosen/mahasiswa'),
   getMahasiswaDocuments: (mahasiswaId) => api.get(`/dosen/mahasiswa/${mahasiswaId}/dokumen`),
@@ -133,6 +150,13 @@ export const dosenAPI = {
   // Validasi Referensi
   validateReferensi: (referensiId, data) => api.put(`/dosen/referensi/${referensiId}/validate`, data),
   getPendingReferensi: () => api.get('/dosen/referensi/pending'),
+  getReferensiHistory: (params) => api.get('/dosen/referensi/history', { params }),
+};
+
+// ============= MAHASISWA API =============
+export const mahasiswaAPI = {
+  // Pilih Dosen Pembimbing
+  chooseDosen: (dosenId) => api.put(`/users/mahasiswa/choose-dosen/${dosenId}`),
 };
 
 export default api;

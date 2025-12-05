@@ -8,10 +8,20 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // --- 2. Import Icons & Context ---
 import { BookOpen, AlertCircle, CheckCircle2, GraduationCap, UserCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
+// --- 3. Specialization Options (Lab-lab di SI Telkom) ---
+const SPECIALIZATIONS = [
+  { value: 'EISD', label: 'EISD - Enterprise Information System Development' },
+  { value: 'EDM', label: 'EDM - Enterprise Digital Management' },
+  { value: 'EIM', label: 'EIM - Enterprise Information Management' },
+  { value: 'ERP', label: 'ERP - Enterprise Resource Planning' },
+  { value: 'SAG', label: 'SAG - System Analysis and Governance' },
+];
 
 const Register = () => {
   const navigate = useNavigate();
@@ -29,10 +39,10 @@ const Register = () => {
     nim: '',
     program_studi: '',
     angkatan: new Date().getFullYear(),
+    bidang_keahlian: '', // Added for mahasiswa too
     // Dosen specific
     nip: '',
     jabatan: '',
-    bidang_keahlian: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -72,13 +82,25 @@ const Register = () => {
       };
 
       if (role === 'mahasiswa') {
-        // Backend mengharapkan object terpisah atau digabung? 
-        // Berdasarkan kode lama Anda, Anda menggabung properties ke userData root
-        // Sesuaikan jika backend butuh struktur nested
+        // Validate specialization is selected
+        if (!formData.bidang_keahlian) {
+          setError('Please select your specialization');
+          setLoading(false);
+          return;
+        }
+        
         userData.nim = formData.nim;
         userData.program_studi = formData.program_studi;
         userData.angkatan = parseInt(formData.angkatan);
+        userData.bidang_keahlian = formData.bidang_keahlian;
       } else {
+        // Validate specialization is selected for dosen
+        if (!formData.bidang_keahlian) {
+          setError('Please select your specialization');
+          setLoading(false);
+          return;
+        }
+        
         userData.nip = formData.nip;
         userData.jabatan = formData.jabatan;
         userData.bidang_keahlian = formData.bidang_keahlian;
@@ -108,11 +130,23 @@ const Register = () => {
       <div className="w-full max-w-xl">
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-lg shadow-primary/20">
-            <BookOpen className="w-8 h-8 text-primary-foreground" />
+          {/* University Logos */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <img 
+              src="/images/logo fakultas rekayasa industri.webp" 
+              alt="Fakultas Rekayasa Industri" 
+              className="h-20 w-auto object-contain drop-shadow-lg"
+            />
+            <img 
+              src="/images/logo sistem informasi.png" 
+              alt="Sistem Informasi" 
+              className="h-20 w-auto object-contain drop-shadow-lg"
+            />
           </div>
+          
           <h1 className="text-4xl font-serif font-bold text-foreground mb-2">Refero</h1>
           <p className="text-muted-foreground">Your AI Research Companion</p>
+          <p className="text-sm text-muted-foreground mt-1">Telkom University - S1 Sistem Informasi</p>
         </div>
 
         <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -216,6 +250,30 @@ const Register = () => {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bidang_keahlian">
+                      Specialization <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.bidang_keahlian}
+                      onValueChange={(value) => setFormData({ ...formData, bidang_keahlian: value })}
+                      required
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select your specialization" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SPECIALIZATIONS.map((spec) => (
+                          <SelectItem key={spec.value} value={spec.value}>
+                            {spec.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      You can only choose advisor with the same specialization
+                    </p>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="dosen" className="space-y-4 mt-0">
@@ -243,15 +301,28 @@ const Register = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="bidang_keahlian">Expertise</Label>
-                      <Input
-                        id="bidang_keahlian"
-                        name="bidang_keahlian"
-                        placeholder="Data Science"
+                      <Label htmlFor="bidang_keahlian">
+                        Specialization <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
                         value={formData.bidang_keahlian}
-                        onChange={handleChange}
-                        required={role === 'dosen'}
-                      />
+                        onValueChange={(value) => setFormData({ ...formData, bidang_keahlian: value })}
+                        required
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select your specialization" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SPECIALIZATIONS.map((spec) => (
+                            <SelectItem key={spec.value} value={spec.value}>
+                              {spec.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        You can only accept students with the same specialization
+                      </p>
                     </div>
                   </div>
                 </TabsContent>

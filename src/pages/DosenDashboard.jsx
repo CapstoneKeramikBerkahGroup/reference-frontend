@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { dosenAPI } from '@/services/api';
+import api, { dosenAPI } from '@/services/api';
+import Navbar from '@/components/Navbar';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,9 @@ import {
   AlertCircle,
   LogOut,
   Eye,
-  TrendingUp
+  TrendingUp,
+  UserCheck,
+  Clock
 } from 'lucide-react';
 
 const DosenDashboard = () => {
@@ -35,6 +38,7 @@ const DosenDashboard = () => {
   const [stats, setStats] = useState(null);
   const [mahasiswaList, setMahasiswaList] = useState([]);
   const [pendingReferensi, setPendingReferensi] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview'); // overview, mahasiswa, referensi
@@ -48,15 +52,23 @@ const DosenDashboard = () => {
     setError('');
     
     try {
-      const [statsRes, mahasiswaRes, referensiRes] = await Promise.all([
+      const [statsRes, mahasiswaRes, referensiRes, requestsRes] = await Promise.all([
         dosenAPI.getDashboardStats(),
         dosenAPI.getMahasiswaBimbingan(),
-        dosenAPI.getPendingReferensi()
+        dosenAPI.getPendingReferensi(),
+        api.get('/pembimbing/incoming-requests')
       ]);
       
       setStats(statsRes.data);
       setMahasiswaList(mahasiswaRes.data);
       setPendingReferensi(referensiRes.data);
+      
+      // Filter only pending requests and match specialization
+      const userSpec = user?.bidang_keahlian;
+      const matchingPendingRequests = requestsRes.data.filter(
+        req => req.status === 'pending' && req.mahasiswa_bidang_keahlian === userSpec
+      );
+      setPendingRequests(matchingPendingRequests);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
@@ -92,41 +104,9 @@ const DosenDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/10 to-background">
-      {/* Header */}
-      <header className="bg-card/95 backdrop-blur border-b border-border/50 sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-serif font-bold text-foreground">Refero</h1>
-                  <p className="text-xs text-muted-foreground">Lecturer Dashboard</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-foreground">{user?.nama}</p>
-                <p className="text-xs text-muted-foreground">Dosen</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                className="h-10 w-10"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
       <div className="container mx-auto px-6 py-8">
         {error && (
           <Alert variant="destructive" className="mb-6">
@@ -191,6 +171,23 @@ const DosenDashboard = () => {
               <p className="text-xs text-muted-foreground">References to validate</p>
             </CardContent>
           </Card>
+
+          <Card 
+            className="border-border/50 hover:shadow-lg transition-all cursor-pointer border-red-200 bg-red-50/50 hover:bg-red-100/50"
+            onClick={() => navigate('/dosen/request-bimbingan')}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Bimbingan Requests</CardTitle>
+              <UserCheck className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{pendingRequests.length}</div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Waiting for approval
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Navigation Tabs */}
@@ -212,66 +209,196 @@ const DosenDashboard = () => {
             Mahasiswa Bimbingan
           </Button>
           <Button
-            variant={activeTab === 'referensi' ? 'default' : 'ghost'}
-            onClick={() => setActiveTab('referensi')}
+            variant={activeTab === 'kelola' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('kelola')}
             className="rounded-b-none"
           >
-            <AlertCircle className="w-4 h-4 mr-2" />
-            Pending Referensi ({stats?.referensi_pending || 0})
+            <Users className="w-4 h-4 mr-2" />
+            Kelola Mahasiswa
           </Button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Mahasiswa */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Mahasiswa Activity</CardTitle>
-                <CardDescription>Latest document uploads from your students</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {mahasiswaList.slice(0, 5).map((mhs) => (
-                  <div key={mhs.id} className="flex items-center justify-between py-3 border-b last:border-b-0">
-                    <div>
-                      <p className="font-medium">{mhs.nama}</p>
-                      <p className="text-sm text-muted-foreground">{mhs.nim} • {mhs.program_studi}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={mhs.total_dokumen > 0 ? 'default' : 'secondary'}>
-                        {mhs.total_dokumen} docs
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Pending Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Action Required</CardTitle>
-                <CardDescription>References waiting for your validation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {pendingReferensi.slice(0, 5).map((ref) => (
-                  <div key={ref.id} className="py-3 border-b last:border-b-0">
-                    <div className="flex items-start justify-between mb-1">
-                      <p className="font-medium text-sm">{ref.mahasiswa_nama}</p>
-                      <Badge variant="outline" className="text-xs">{ref.tahun}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {ref.teks_referensi}
+          <div className="space-y-6">
+            {/* Action Required - Pending Bimbingan Requests */}
+            {pendingRequests.length > 0 && (
+              <Alert className="bg-red-50 border-red-200">
+                <UserCheck className="h-4 w-4 text-red-600" />
+                <AlertDescription className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-red-900">
+                      {pendingRequests.length} mahasiswa menunggu approval bimbingan
+                    </span>
+                    <p className="text-sm text-red-700 mt-1">
+                      Terdapat request bimbingan dari mahasiswa dengan peminatan yang sama dengan Anda
                     </p>
                   </div>
-                ))}
-                {pendingReferensi.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No pending referensi
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                  <Button 
+                    onClick={() => navigate('/dosen/request-bimbingan')}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Lihat Request
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Action Required - Papers with Pending References */}
+            {(() => {
+              // Group pending referensi by document
+              const groupedByDoc = pendingReferensi.reduce((acc, ref) => {
+                const docKey = ref.dokumen_id;
+                if (!acc[docKey]) {
+                  acc[docKey] = {
+                    dokumen_id: ref.dokumen_id,
+                    dokumen_judul: ref.dokumen_judul,
+                    mahasiswa_nama: ref.mahasiswa_nama,
+                    pending_count: 0
+                  };
+                }
+                acc[docKey].pending_count += 1;
+                return acc;
+              }, {});
+              
+              const pendingDocuments = Object.values(groupedByDoc);
+              
+              return pendingDocuments.length > 0 ? (
+                <Card className="border-2 border-yellow-200 dark:border-yellow-900 bg-yellow-50/50 dark:bg-yellow-950/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                        <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">Action Required</CardTitle>
+                        <CardDescription className="text-base">
+                          {pendingDocuments.length} document{pendingDocuments.length > 1 ? 's' : ''} waiting for your review
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {pendingDocuments.slice(0, 5).map((doc) => (
+                        <div
+                          key={doc.dokumen_id}
+                          className="flex items-center justify-between p-4 bg-background rounded-lg border hover:border-primary transition-all cursor-pointer group"
+                          onClick={() => handleViewDokumen(doc.dokumen_id)}
+                        >
+                          <div className="flex-1 min-w-0 mr-4">
+                            <div className="flex items-start gap-3 mb-1">
+                              <FileText className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                              <h3 className="font-semibold text-base group-hover:text-primary transition-colors line-clamp-1" title={doc.dokumen_judul}>
+                                {doc.dokumen_judul}
+                              </h3>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground ml-8">
+                              <span className="truncate max-w-[200px]">{doc.mahasiswa_nama}</span>
+                              <span>•</span>
+                              <Badge variant="secondary" className="font-semibold flex-shrink-0">
+                                {doc.pending_count} pending
+                              </Badge>
+                            </div>
+                          </div>
+                          <Button variant="outline" className="ml-4" onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/dosen/dokumen/${doc.dokumen_id}`, {
+                              state: { openReferences: true }
+                            });
+                          }}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Review
+                          </Button>
+                        </div>
+                      ))}
+                      {pendingDocuments.length > 5 && (
+                        <p className="text-sm text-muted-foreground text-center pt-2">
+                          And {pendingDocuments.length - 5} more document{pendingDocuments.length - 5 > 1 ? 's' : ''}...
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null;
+            })()}
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Mahasiswa */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Mahasiswa Activity</CardTitle>
+                  <CardDescription>Latest document uploads from your students</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {mahasiswaList.slice(0, 5).map((mhs) => (
+                    <div key={mhs.id} className="flex items-center justify-between py-3 border-b last:border-b-0">
+                      <div>
+                        <p className="font-medium">{mhs.nama}</p>
+                        <p className="text-sm text-muted-foreground">{mhs.nim} • {mhs.program_studi}</p>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={mhs.total_dokumen > 0 ? 'default' : 'secondary'}>
+                          {mhs.total_dokumen} docs
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {mahasiswaList.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No students yet
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Statistics</CardTitle>
+                  <CardDescription>Overview of your supervision</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Total Mahasiswa</span>
+                    </div>
+                    <span className="font-bold">{stats?.total_mahasiswa || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Total Documents</span>
+                    </div>
+                    <span className="font-bold">{stats?.total_dokumen || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span className="text-sm">Completed Analysis</span>
+                    </div>
+                    <span className="font-bold text-green-600">{stats?.dokumen_completed || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">My Comments</span>
+                    </div>
+                    <span className="font-bold">{stats?.total_catatan || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm font-medium">Pending Validation</span>
+                    </div>
+                    <span className="font-bold text-orange-600">{stats?.referensi_pending || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 
@@ -334,55 +461,97 @@ const DosenDashboard = () => {
           </Card>
         )}
 
-        {activeTab === 'referensi' && (
+        {activeTab === 'kelola' && (
           <Card>
             <CardHeader>
-              <CardTitle>Pending Referensi Validation</CardTitle>
-              <CardDescription>References that need your approval</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Kelola Mahasiswa Bimbingan</CardTitle>
+                  <CardDescription>Manage students under your supervision</CardDescription>
+                </div>
+                <Button onClick={() => navigate('/dosen/mahasiswa-management')}>
+                  <Users className="w-4 h-4 mr-2" />
+                  Go to Management Page
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Mahasiswa</TableHead>
-                    <TableHead>Dokumen</TableHead>
-                    <TableHead>Referensi</TableHead>
-                    <TableHead>Penulis</TableHead>
-                    <TableHead>Tahun</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingReferensi.map((ref) => (
-                    <TableRow key={ref.id}>
-                      <TableCell className="font-medium">{ref.mahasiswa_nama}</TableCell>
-                      <TableCell className="max-w-xs truncate">{ref.dokumen_judul}</TableCell>
-                      <TableCell className="max-w-md truncate text-sm">
-                        {ref.teks_referensi}
-                      </TableCell>
-                      <TableCell>{ref.penulis || '-'}</TableCell>
-                      <TableCell>{ref.tahun || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDokumen(ref.dokumen_id)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Review
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              
-              {pendingReferensi.length === 0 && (
-                <div className="text-center py-8">
-                  <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                  <p className="text-muted-foreground">All referensi are validated!</p>
+              <div className="space-y-4">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Click the button above to access the full management page where you can add, edit, or remove students.
+                  </AlertDescription>
+                </Alert>
+                
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Mahasiswa</p>
+                          <p className="text-2xl font-bold">{stats?.total_mahasiswa || 0}</p>
+                        </div>
+                        <Users className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Active Students</p>
+                          <p className="text-2xl font-bold">{mahasiswaList.filter(m => m.total_dokumen > 0).length}</p>
+                        </div>
+                        <CheckCircle2 className="h-8 w-8 text-green-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Documents</p>
+                          <p className="text-2xl font-bold">{stats?.total_dokumen || 0}</p>
+                        </div>
+                        <FileText className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              )}
+
+                {/* Recent Students List */}
+                <div className="pt-4">
+                  <h3 className="text-lg font-semibold mb-4">Recent Students</h3>
+                  <div className="space-y-2">
+                    {mahasiswaList.slice(0, 10).map((mhs) => (
+                      <div key={mhs.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                        <div className="flex-1">
+                          <p className="font-medium">{mhs.nama}</p>
+                          <p className="text-sm text-muted-foreground">{mhs.nim} • {mhs.program_studi}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <Badge variant={mhs.total_dokumen > 0 ? 'default' : 'secondary'}>
+                              {mhs.total_dokumen} docs
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewMahasiswaDokumen(mhs.id, mhs.nama)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

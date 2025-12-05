@@ -12,11 +12,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BookOpen, AlertCircle, CheckCircle2, GraduationCap, UserCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import CaptchaInput from '@/components/CaptchaInput';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { loginWithCaptcha } = useAuth();
 
   // --- 3. State Management ---
   const [role, setRole] = useState('mahasiswa'); // Default to mahasiswa
@@ -24,6 +25,10 @@ const Login = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // CAPTCHA state
+  const [captchaText, setCaptchaText] = useState('');
+  const [captchaSessionId, setCaptchaSessionId] = useState('');
 
   useEffect(() => {
     // Cek pesan sukses dari halaman registrasi
@@ -41,15 +46,38 @@ const Login = () => {
     if (error) setError('');
   };
 
+  const handleCaptchaChange = (text, sessionId) => {
+    setCaptchaText(text);
+    setCaptchaSessionId(sessionId);
+    if (error) setError('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess(''); // Clear previous success messages
+    
+    // Validate CAPTCHA
+    if (!captchaText || captchaText.length !== 6) {
+      setError('Please enter the CAPTCHA code');
+      return;
+    }
+    
+    if (!captchaSessionId) {
+      setError('CAPTCHA session expired. Please refresh.');
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      console.log(`🔐 Attempting login as ${role} with:`, formData.email);
-      const userData = await login(formData);
+      console.log(`🔐 Attempting login as ${role} with CAPTCHA:`, formData.email);
+      const userData = await loginWithCaptcha({
+        email: formData.email,
+        password: formData.password,
+        captcha_text: captchaText,
+        session_id: captchaSessionId
+      });
       console.log('✅ Login successful! User data:', userData);
       
       // Validate role matches selection
@@ -69,8 +97,16 @@ const Login = () => {
       }
     } catch (err) {
       console.error('❌ Login error:', err);
-      // Ambil pesan error dari backend jika ada
-      setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
+      
+      // Handle specific error cases
+      if (err.response?.status === 429) {
+        setError('Too many login attempts. Please try again later.');
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError('Login failed. Please check your credentials and CAPTCHA.');
+      }
+      
       setLoading(false);
     }
   };
@@ -80,11 +116,23 @@ const Login = () => {
       <div className="w-full max-w-md">
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-lg shadow-primary/20">
-            <BookOpen className="w-8 h-8 text-primary-foreground" />
+          {/* University Logos */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <img 
+              src="/images/logo fakultas rekayasa industri.webp" 
+              alt="Fakultas Rekayasa Industri" 
+              className="h-20 w-auto object-contain drop-shadow-lg"
+            />
+            <img 
+              src="/images/logo sistem informasi.png" 
+              alt="Sistem Informasi" 
+              className="h-20 w-auto object-contain drop-shadow-lg"
+            />
           </div>
+          
           <h1 className="text-4xl font-serif font-bold text-foreground mb-2">Refero</h1>
           <p className="text-muted-foreground">Your AI Research Companion</p>
+          <p className="text-sm text-muted-foreground mt-1">Telkom University - S1 Sistem Informasi</p>
         </div>
 
         <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -155,9 +203,8 @@ const Login = () => {
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password">Password</Label>
                       <Link 
-                        to="#" 
+                        to="/forgot-password" 
                         className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                        onClick={(e) => e.preventDefault()}
                       >
                         Forgot password?
                       </Link>
@@ -195,9 +242,8 @@ const Login = () => {
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password-dosen">Password</Label>
                       <Link 
-                        to="#" 
+                        to="/forgot-password" 
                         className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                        onClick={(e) => e.preventDefault()}
                       >
                         Forgot password?
                       </Link>
@@ -214,6 +260,11 @@ const Login = () => {
                     />
                   </div>
                 </TabsContent>
+
+                {/* CAPTCHA Component - Shared for both roles */}
+                <div className="pt-2">
+                  <CaptchaInput onCaptchaChange={handleCaptchaChange} />
+                </div>
 
                 <Button 
                   type="submit" 

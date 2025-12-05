@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { dosenAPI } from '@/services/api';
+import Navbar from '@/components/Navbar';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -79,7 +80,9 @@ const DosenMahasiswaDokumen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-accent/20">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">

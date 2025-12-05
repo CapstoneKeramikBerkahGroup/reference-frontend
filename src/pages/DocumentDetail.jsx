@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
+// --- Components ---
+import Navbar from '@/components/Navbar';
+
 // --- 1. Import Komponen Shadcn UI ---
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -197,32 +200,37 @@ const DocumentDetail = () => {
 
   if (!document) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md p-6 text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-          <h3 className="text-lg font-semibold mb-2">Document Not Found</h3>
-          <Button onClick={() => navigate('/dashboard')} variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
-          </Button>
-        </Card>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+          <Card className="max-w-md p-6 text-center border-cyan-200">
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-semibold mb-2">Document Not Found</h3>
+            <Button onClick={() => navigate('/dashboard')} variant="outline" className="border-cyan-300 text-cyan-700 hover:bg-cyan-50">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Dashboard
+            </Button>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background pb-20">
-      {/* Header Navigation */}
-      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      {/* Header Section */}
+      <header className="border-b border-cyan-200 bg-white sticky top-16 z-40">
         <div className="container mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="gap-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+            <ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard
           </Button>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="w-4 h-4 mr-2" /> Download
+            <Button variant="outline" size="sm" onClick={handleDownload} className="border-cyan-300 text-cyan-700 hover:bg-cyan-50">
+              <Download className="w-4 h-4 mr-2" /> Unduh
             </Button>
             <Button variant="destructive" size="sm" onClick={handleDelete}>
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
+              <Trash2 className="w-4 h-4 mr-2" /> Hapus
             </Button>
           </div>
         </div>
@@ -231,18 +239,18 @@ const DocumentDetail = () => {
       <main className="container mx-auto px-4 lg:px-8 py-8 max-w-6xl">
         
         {/* 1. Document Info Card */}
-        <Card className="mb-8 border-border/50 shadow-sm">
+        <Card className="mb-8 border-cyan-200 shadow-sm bg-white">
           <CardHeader className="pb-4">
             <div className="flex flex-col md:flex-row md:items-start gap-6">
               {/* Icon */}
-              <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <FileText className="w-10 h-10 text-primary" />
+              <div className="w-20 h-20 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <FileText className="w-10 h-10 text-cyan-600" />
               </div>
               
               {/* Title & Meta */}
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 min-w-0 space-y-2">
                 <div className="flex flex-col md:flex-row md:justify-between gap-4">
-                  <CardTitle className="text-2xl md:text-3xl font-serif leading-tight text-foreground">
+                  <CardTitle className="text-2xl md:text-3xl font-serif leading-tight text-gray-900 break-words min-w-0">
                     {document.judul}
                   </CardTitle>
                   
@@ -250,21 +258,22 @@ const DocumentDetail = () => {
                   <div className="flex-shrink-0">
                     {document.status_analisis === 'completed' ? (
                       <Badge className="bg-green-100 text-green-700 border-green-200 px-3 py-1">
-                        <CheckCircle2 className="w-3 h-3 mr-1" /> Processed
+                        <CheckCircle2 className="w-3 h-3 mr-1" /> Selesai
                       </Badge>
                     ) : document.status_analisis === 'processing' || processing ? (
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1 animate-pulse">
-                        <Clock className="w-3 h-3 mr-1 animate-spin" /> Processing
+                      <Badge className="bg-cyan-100 text-cyan-700 border-cyan-200 px-3 py-1 animate-pulse">
+                        <Clock className="w-3 h-3 mr-1 animate-spin" /> Sedang Diproses
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="px-3 py-1">Pending Analysis</Badge>
+                      <Badge variant="outline" className="px-3 py-1">Analisis Tertunda</Badge>
                     )}
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
-                   <span className="flex items-center bg-accent/50 px-2 py-1 rounded">
-                     <FileText className="w-3 h-3 mr-2" /> {document.nama_file}
+                   <span className="flex items-center bg-accent/50 px-2 py-1 rounded min-w-0 max-w-full">
+                     <FileText className="w-3 h-3 mr-2 flex-shrink-0" />
+                     <span className="truncate" title={document.nama_file}>{document.nama_file}</span>
                    </span>
                    <span className="flex items-center bg-accent/50 px-2 py-1 rounded">
                      <Clock className="w-3 h-3 mr-2" /> {format(new Date(document.tanggal_unggah), 'MMM dd, yyyy HH:mm')}
@@ -294,24 +303,24 @@ const DocumentDetail = () => {
 
             {/* Progress Bar (Processing State) */}
             {(processing || document.status_analisis === 'processing') && (
-               <Card className="border-blue-200 bg-blue-50/50">
+               <Card className="border-cyan-200 bg-cyan-50/50">
                  <CardContent className="pt-6">
-                   <div className="flex justify-between text-sm mb-2 font-medium text-blue-700">
+                   <div className="flex justify-between text-sm mb-2 font-medium text-cyan-700">
                       <span>{processingStep || 'AI is analyzing document...'}</span>
                       <span>{processingProgress}%</span>
                    </div>
-                   <Progress value={processingProgress} className="h-2 w-full bg-blue-100" />
-                   <p className="text-xs text-blue-600 mt-2">This may take a few moments depending on document length.</p>
+                   <Progress value={processingProgress} className="h-2 w-full bg-cyan-100" />
+                   <p className="text-xs text-cyan-600 mt-2">This may take a few moments depending on document length.</p>
                  </CardContent>
                </Card>
             )}
 
             {/* Summary Section */}
-            <Card className="border-border/50 shadow-sm h-fit">
+            <Card className="border-cyan-200 shadow-sm h-fit bg-white">
               <CardHeader className="border-b border-border/40 bg-accent/5">
                 <CardTitle className="flex items-center gap-2 text-lg font-serif">
                   <BookOpen className="w-5 h-5 text-primary" />
-                  Executive Summary
+                  Ringkasan
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
@@ -320,11 +329,11 @@ const DocumentDetail = () => {
                     {document.ringkasan}
                   </div>
                 ) : (
-                  <div className="text-center py-12 bg-accent/5 rounded-lg border border-dashed border-border">
-                    <Brain className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-                    <p className="text-muted-foreground mb-4">No summary generated yet.</p>
-                    <Button onClick={handleProcessDocument} disabled={processing}>
-                      <Sparkles className="w-4 h-4 mr-2" /> Generate Summary with AI
+                  <div className="text-center py-12 bg-cyan-50 rounded-lg border border-dashed border-cyan-200">
+                    <Brain className="w-12 h-12 mx-auto mb-3 text-cyan-300" />
+                    <p className="text-gray-600 mb-4">Belum ada ringkasan yang dihasilkan.</p>
+                    <Button onClick={handleProcessDocument} disabled={processing} className="bg-cyan-600 hover:bg-cyan-700">
+                      <Sparkles className="w-4 h-4 mr-2" /> Buat Ringkasan dengan AI
                     </Button>
                   </div>
                 )}
@@ -332,11 +341,11 @@ const DocumentDetail = () => {
             </Card>
 
             {/* References List */}
-            <Card className="border-border/50 shadow-sm">
+            <Card className="border-cyan-200 shadow-sm bg-white">
               <CardHeader className="border-b border-border/40 bg-accent/5">
                 <CardTitle className="flex items-center gap-2 text-lg font-serif">
                   <FileText className="w-5 h-5 text-primary" />
-                  Extracted References
+                  Referensi yang Diekstrak
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
@@ -352,7 +361,7 @@ const DocumentDetail = () => {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-muted-foreground text-sm italic">No references extracted yet.</p>
+                  <p className="text-muted-foreground text-sm italic">Belum ada referensi yang diekstrak.</p>
                 )}
               </CardContent>
             </Card>
@@ -362,31 +371,31 @@ const DocumentDetail = () => {
           <div className="space-y-6">
             
             {/* Actions Card */}
-            <Card className="border-border/50 shadow-sm">
+            <Card className="border-cyan-200 shadow-sm bg-white">
               <CardHeader>
-                <CardTitle className="text-base">Quick Actions</CardTitle>
+                <CardTitle className="text-base">Aksi Cepat</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full justify-start bg-cyan-600 hover:bg-cyan-700" 
                   onClick={handleProcessDocument} 
                   disabled={processing || document.status_analisis === 'processing'}
                 >
                   {processing ? <Clock className="w-4 h-4 mr-2 animate-spin"/> : <Sparkles className="w-4 h-4 mr-2" />}
                   {document.status_analisis === 'completed' ? 'Re-Process Document' : 'Start AI Analysis'}
                 </Button>
-                <Button className="w-full justify-start" variant="outline" onClick={handleDownload}>
-                  <Download className="w-4 h-4 mr-2" /> Download Original
+                <Button className="w-full justify-start border-cyan-300 text-cyan-700 hover:bg-cyan-50" variant="outline" onClick={handleDownload}>
+                  <Download className="w-4 h-4 mr-2" /> Unduh Asli
                 </Button>
               </CardContent>
             </Card>
 
             {/* Keywords Card */}
-            <Card className="border-border/50 shadow-sm">
+            <Card className="border-cyan-200 shadow-sm bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="w-4 h-4 text-yellow-500" />
-                  AI Keywords
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  Kata Kunci AI
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -399,16 +408,16 @@ const DocumentDetail = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Process document to extract keywords.</p>
+                  <p className="text-xs text-muted-foreground">Proses dokumen untuk mengekstrak kata kunci.</p>
                 )}
               </CardContent>
             </Card>
 
             {/* Tags Card */}
-            <Card className="border-border/50 shadow-sm">
+            <Card className="border-cyan-200 shadow-sm bg-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-primary" /> Tags
+                  <Tag className="w-4 h-4 text-cyan-600" /> Tags
                 </CardTitle>
                 
                 <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
@@ -419,9 +428,9 @@ const DocumentDetail = () => {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                      <DialogTitle>Manage Tags</DialogTitle>
+                      <DialogTitle>Kelola Tag</DialogTitle>
                       <DialogDescription>
-                        Add tags to organize your documents better.
+                        Tambahkan tag untuk mengatur dokumen Anda dengan lebih baik.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -431,14 +440,14 @@ const DocumentDetail = () => {
                           value={newTagName}
                           onChange={(e) => setNewTagName(e.target.value)}
                         />
-                        <Button onClick={handleAddTag}>Add</Button>
+                        <Button onClick={handleAddTag} className="bg-cyan-600 hover:bg-cyan-700">Add</Button>
                       </div>
                       <div className="flex flex-wrap gap-2 mt-2">
                          {allTags.map(tag => (
                            <Badge 
                             key={tag.id} 
                             variant="outline" 
-                            className="cursor-pointer hover:bg-primary/10"
+                            className="cursor-pointer hover:bg-cyan-50 border-cyan-200"
                             onClick={() => setNewTagName(tag.nama_tag)}
                            >
                              {tag.nama_tag}
@@ -453,16 +462,16 @@ const DocumentDetail = () => {
                 <div className="flex flex-wrap gap-2 mt-3">
                   {document.tags && document.tags.length > 0 ? (
                     document.tags.map((tag, i) => (
-                      <Badge key={i} className="pl-2 pr-1 py-1 flex items-center gap-1">
+                      <Badge key={i} className="pl-2 pr-1 py-1 flex items-center gap-1 bg-cyan-100 text-cyan-700 hover:bg-cyan-200">
                         {tag.nama_tag || tag}
                         <X 
-                          className="w-3 h-3 cursor-pointer hover:text-red-300" 
+                          className="w-3 h-3 cursor-pointer hover:text-red-600" 
                           onClick={() => handleRemoveTag(tag.id)}
                         />
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-xs text-muted-foreground italic">No tags assigned</span>
+                    <span className="text-xs text-muted-foreground italic">Tidak ada tag yang ditetapkan</span>
                   )}
                 </div>
               </CardContent>

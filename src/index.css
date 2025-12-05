@@ -157,4 +157,11 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Lighter placeholder colors for auth pages */
+  input::placeholder,
+  textarea::placeholder,
+  select::placeholder {
+    @apply text-gray-400 opacity-60;
+  }
 }

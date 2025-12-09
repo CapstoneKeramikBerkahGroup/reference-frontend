@@ -13,6 +13,9 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DocumentDetail from './pages/DocumentDetail';
 import Visualization from './pages/Visualization';
+import Comparison from './pages/Comparison';
+import Settings from './pages/Settings';
+import Drafting from './pages/Drafting';
 
 // Protected Route Component (Opsional: untuk keamanan)
 // Jika user belum login, tendang ke halaman login
@@ -61,6 +64,33 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Visualization />
+                  </PrivateRoute>
+                } 
+              />
+
+              <Route 
+                path="/comparison" 
+                element={
+                  <PrivateRoute>
+                    <Comparison />
+                  </PrivateRoute>
+                } 
+              />
+
+              <Route 
+                path="/settings" 
+                element={
+                  <PrivateRoute>
+                    <Settings />
+                  </PrivateRoute>
+                } 
+              />
+              
+              <Route 
+                path="/draft" 
+                element={
+                  <PrivateRoute>
+                    <Drafting />
                   </PrivateRoute>
                 } 
               />

@@ -107,4 +107,11 @@ export const usersAPI = {
   getDosen: () => api.get('/users/dosen'),
 };
 
+export const integrationAPI = {
+  connectZotero: (data) => api.post('/integration/zotero/connect', data),
+  syncZotero: () => api.post('/integration/zotero/sync'),
+  getReferences: () => api.get('/integration/references'),
+  analyzeZotero: (refId) => api.post(`/integration/zotero/analyze/${refId}`),
+};
+
 export default api;

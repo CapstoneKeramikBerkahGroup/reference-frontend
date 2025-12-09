@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// --- 1. Import Komponen Shadcn (Pengganti MUI) ---
+// --- UI Components ---
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner'; 
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
-// --- 2. Import Icons & Context ---
+// --- Icons ---
 import { 
-  Download, Trash2, Eye, FileText, FolderOpen, Clock, CloudDownload, Link2 
+  Search, Upload, Download, Trash2, Eye, LogOut, 
+  FileText, TrendingUp, Plus, FolderOpen, Clock, User, BookOpen, Scale, 
+  Link as LinkIcon, Book, LayoutGrid, Sparkles, CloudDownload, Link2 
 } from 'lucide-react';
+
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { documentsAPI } from '../services/api';
+import { documentsAPI, integrationAPI } from '../services/api';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import api from '../services/api';
@@ -23,20 +28,42 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const { t, language } = useLanguage();
 
-  // --- 3. State Management (Dari Kode Lama Anda) ---
+  // --- State Management ---
+  const [activeTab, setActiveTab] = useState('uploads');
+  
   const [documents, setDocuments] = useState([]);
+  const [filteredDocuments, setFilteredDocuments] = useState([]);
+  
+  const [references, setReferences] = useState([]);
+  const [filteredReferences, setFilteredReferences] = useState([]);
+  
   const [loading, setLoading] = useState(true);
+  const [loadingRef, setLoadingRef] = useState(false);
   const [mendeleyLoading, setMendeleyLoading] = useState(false);
   const [mendeleyConnected, setMendeleyConnected] = useState(false);
   const [mendeleyStatus, setMendeleyStatus] = useState(null);
-  
-  // --- 4. Logika Backend (Dipertahankan & Disesuaikan) ---
 
+  // State untuk Loading Analisis Zotero Per Item
+  const [analyzingIds, setAnalyzingIds] = useState([]); 
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadFiles, setUploadFiles] = useState([]);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploading, setUploading] = useState(false);
+  
+  // --- Load Data ---
   useEffect(() => {
     loadDocuments();
+    loadZoteroReferences();
     checkMendeleyCallback();
     checkMendeleyStatus();
   }, []);
+
+  useEffect(() => {
+    filterData();
+  }, [searchQuery, documents, references, activeTab]);
+
 
   const loadDocuments = async () => {
     try {
@@ -44,9 +71,90 @@ const Dashboard = () => {
       setDocuments(response.data);
     } catch (err) {
       toast.error('Failed to load documents');
-      console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadZoteroReferences = async () => {
+    setLoadingRef(true);
+    try {
+      const response = await integrationAPI.getReferences();
+      setReferences(response.data);
+    } catch (err) {
+      console.log("Zotero fetch error (User might not be connected)");
+    } finally {
+      setLoadingRef(false);
+    }
+  };
+
+  const filterData = () => {
+    const query = searchQuery.toLowerCase();
+    if (activeTab === 'uploads') {
+        const filtered = documents.filter((doc) =>
+            doc.judul.toLowerCase().includes(query) ||
+            doc.nama_file.toLowerCase().includes(query)
+        );
+        setFilteredDocuments(filtered);
+    } else {
+        const filtered = references.filter((ref) => 
+            ref.title.toLowerCase().includes(query) ||
+            ref.authors.toLowerCase().includes(query)
+        );
+        setFilteredReferences(filtered);
+    }
+  };
+
+  // --- Zotero Analysis Handler ---
+  const handleAnalyzeZotero = async (refId) => {
+    // Tambahkan ID ke state loading
+    setAnalyzingIds(prev => [...prev, refId]);
+    
+    try {
+        // Panggil API Backend untuk download & proses
+        await integrationAPI.analyzeZotero(refId);
+        
+        toast.success("Document downloaded & processing started!");
+        
+        // Refresh data setelah delay singkat (agar status updated)
+        setTimeout(() => {
+            loadZoteroReferences(); // Refresh list Zotero (cek local_document_id)
+            loadDocuments();        // Refresh list Uploads (dokumen baru masuk)
+        }, 2000);
+        
+    } catch (err) {
+        toast.error(err.response?.data?.detail || "Failed to process Zotero item. PDF might be missing.");
+    } finally {
+        // Hapus ID dari state loading
+        setAnalyzingIds(prev => prev.filter(id => id !== refId));
+    }
+  };
+
+  // --- Handlers Lainnya ---
+  const handleUpload = async () => {
+    if (uploadFiles.length === 0) {
+      toast.warning('Please select at least one file');
+      return;
+    }
+    setUploading(true);
+    try {
+      for (let i = 0; i < uploadFiles.length; i++) {
+        const file = uploadFiles[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        const titleToSend = uploadTitle || file.name.replace(/\.[^/.]+$/, '');
+        formData.append('judul', titleToSend);
+        await documentsAPI.upload(formData);
+      }
+      toast.success('Documents uploaded successfully!');
+      setUploadDialogOpen(false);
+      setUploadFiles([]);
+      setUploadTitle('');
+      loadDocuments();
+    } catch (err) {
+      toast.error('Upload failed');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -181,7 +289,7 @@ const Dashboard = () => {
     }
   };
 
-  // --- 5. Helper UI (Dari Lovable) ---
+  // --- 5. Helper UI ---
   const getStatusBadge = (status) => {
     switch (status) {
       case 'completed':
@@ -200,7 +308,6 @@ const Dashboard = () => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // --- 6. Render Tampilan (Menggunakan JSX dari Lovable) ---
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -217,7 +324,8 @@ const Dashboard = () => {
       <Navbar />
 
       <main className="container mx-auto px-4 lg:px-8 py-8">
-        {/* Stats Cards */}
+        
+        {/* STATS CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card className="border-cyan-200 bg-white shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
@@ -347,107 +455,182 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Documents - Quick Access */}
-        <div className="mb-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-serif font-bold text-gray-900">{t('dashboard.recentDocuments')}</h2>
-            <p className="text-sm text-gray-600">{t('dashboard.quickAccess')}</p>
-          </div>
+        {/* TAB SWITCHER */}
+        <div className="mb-6 border-b border-border/40">
+            <div className="flex gap-6">
+                <button 
+                    onClick={() => setActiveTab('uploads')}
+                    className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                        activeTab === 'uploads' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <LayoutGrid className="w-4 h-4" /> My Uploads
+                        <Badge variant="secondary" className="ml-1 text-[10px] h-5 px-1">{documents.length}</Badge>
+                    </div>
+                </button>
+                <button 
+                    onClick={() => setActiveTab('zotero')}
+                    className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                        activeTab === 'zotero' ? 'border-blue-600 text-blue-600' : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Book className="w-4 h-4" /> Zotero Library
+                        <Badge variant="secondary" className="ml-1 text-[10px] h-5 px-1">{references.length}</Badge>
+                    </div>
+                </button>
+            </div>
         </div>
 
-        {/* Document List */}
-        {documents.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-cyan-200">
-            <FileText className="w-16 h-16 mx-auto mb-4 text-cyan-300" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('dashboard.noDocuments')}</h3>
-            <p className="text-gray-600 mb-6">{t('dashboard.uploadFirst')}</p>
-          </div>
-        ) : (
-          <>
-            {/* Horizontal Card Layout - Compact for Quick Access */}
-            <div className="space-y-3">
-              {documents.slice(0, 6).map((doc) => (
-                <Card 
-                  key={doc.id} 
-                  className="border-cyan-200 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer group border-l-4 border-l-cyan-500"
-                  onClick={() => navigate(`/documents/${doc.id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      {/* Icon */}
-                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-6 h-6 text-cyan-600" />
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-cyan-600 transition-colors break-words min-w-0 flex-1" title={doc.judul}>
-                            {doc.judul}
-                          </h3>
-                          <div className="flex-shrink-0">
-                            {getStatusBadge(doc.status_analisis)}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600 flex-wrap">
-                          <span className="truncate flex items-center min-w-0 max-w-xs" title={doc.nama_file}>
-                            <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
-                            {doc.nama_file}
-                          </span>
-                          <span className="flex items-center flex-shrink-0 whitespace-nowrap">
-                            <Clock className="w-3.5 h-3.5 mr-1.5" />
-                            {format(new Date(doc.tanggal_unggah), 'MMM dd, yyyy')}
-                          </span>
-                          <span className="flex-shrink-0 whitespace-nowrap">{formatFileSize(doc.ukuran_kb * 1024)}</span>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/documents/${doc.id}`);
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-1" /> {t('common.view')}
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="border-gray-300"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(doc.id, doc.nama_file);
-                          }}
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
+        {/* CONTENT */}
+        
+        {/* TAB 1: UPLOADS */}
+        {activeTab === 'uploads' && (
+            <>
+                {filteredDocuments.length === 0 ? (
+                    <div className="text-center py-12">
+                        <p className="text-muted-foreground">No uploaded documents found matching your search.</p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          
-          {/* View All Button - Only show if more than 6 documents */}
-          {documents.length > 6 && (
-            <div className="mt-8 text-center">
-              <Button 
-                variant="outline" 
-                size="lg"
-                onClick={() => navigate('/documents')}
-                className="border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-              >
-                <FolderOpen className="w-4 h-4 mr-2" />
-                {t('dashboard.viewAll')}
-              </Button>
-            </div>
-          )}
-        </>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredDocuments.map((doc) => (
+                        <Card 
+                            key={doc.id} 
+                            className="border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer group"
+                            onClick={() => navigate(`/documents/${doc.id}`)}
+                        >
+                            <CardHeader>
+                            <div className="flex items-start justify-between mb-2">
+                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <FileText className="w-5 h-5 text-primary" />
+                                </div>
+                                {getStatusBadge(doc.status_analisis)}
+                            </div>
+                            <CardTitle className="text-lg font-serif line-clamp-2 group-hover:text-primary transition-colors">
+                                {doc.judul}
+                            </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                            <div className="flex items-center text-sm text-muted-foreground truncate">
+                                <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
+                                <span className="truncate">{doc.nama_file}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>{formatFileSize(doc.ukuran_kb * 1024)}</span>
+                                <span>{format(new Date(doc.tanggal_unggah), 'MMM dd, yyyy')}</span>
+                            </div>
+                            </CardContent>
+                            <CardFooter className="flex gap-2">
+                            <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); navigate(`/documents/${doc.id}`); }}>
+                                <Eye className="w-4 h-4 mr-1" /> View
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(doc.id, doc.nama_file); }}>
+                                <Download className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}>
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                            </CardFooter>
+                        </Card>
+                        ))}
+                    </div>
+                )}
+            </>
+        )}
+
+        {/* TAB 2: ZOTERO (YANG SEKARANG SUDAH ADA BUTTON ANALYZE) */}
+        {activeTab === 'zotero' && (
+            <>
+                {loadingRef ? (
+                    <div className="text-center py-12 text-muted-foreground">Loading your library...</div>
+                ) : filteredReferences.length === 0 ? (
+                    <div className="text-center py-12 border-2 border-dashed rounded-lg bg-gray-50/50">
+                        <Book className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                        <p className="text-muted-foreground">No references found in Zotero library.</p>
+                        <Button variant="link" onClick={() => navigate('/settings')}>Check Connection</Button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredReferences.map((ref) => (
+                        <Card 
+                            key={ref.id} 
+                            className="border-border/50 bg-white hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer group"
+                        >
+                            <CardHeader>
+                            <div className="flex items-start justify-between mb-2">
+                                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Book className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700">Zotero</Badge>
+                            </div>
+                            <CardTitle className="text-lg font-serif line-clamp-2 group-hover:text-blue-600 transition-colors" title={ref.title}>
+                                {ref.title}
+                            </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                    <p className="line-clamp-1 font-medium text-foreground">{ref.authors}</p>
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-3 h-3" /> Year: {ref.year}
+                                    </div>
+                                </div>
+                                {ref.abstract && (
+                                    <p className="text-xs text-gray-500 line-clamp-3 italic bg-gray-50 p-2 rounded border">
+                                        "{ref.abstract}"
+                                    </p>
+                                )}
+                            </CardContent>
+                            <CardFooter className="flex gap-2 pt-2">
+                                {/* JIKA SUDAH DIANALISIS -> MUNCUL TOMBOL VIEW */}
+                                {ref.local_document_id ? (
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="flex-1 text-green-700 border-green-200 hover:bg-green-50"
+                                        onClick={() => navigate(`/documents/${ref.local_document_id}`)}
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" /> View Analysis
+                                    </Button>
+                                ) : (
+                                    /* JIKA BELUM -> MUNCUL TOMBOL ANALYZE */
+                                    <Button 
+                                        variant="default" 
+                                        size="sm" 
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                        onClick={() => handleAnalyzeZotero(ref.id)}
+                                        disabled={analyzingIds.includes(ref.id)}
+                                    >
+                                        {analyzingIds.includes(ref.id) ? (
+                                            <>
+                                                <span className="animate-spin mr-2">⌛</span> Processing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="w-4 h-4 mr-2" /> Analyze AI
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
+
+                                {/* TOMBOL LINK ORIGINAL */}
+                                {ref.url && (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="text-muted-foreground hover:text-blue-600"
+                                        onClick={() => window.open(ref.url, '_blank')}
+                                        title="Open Source"
+                                    >
+                                        <LinkIcon className="w-4 h-4" />
+                                    </Button>
+                                )}
+                            </CardFooter>
+                        </Card>
+                        ))}
+                    </div>
+                )}
+            </>
         )}
       </main>
     </div>

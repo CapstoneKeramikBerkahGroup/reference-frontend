@@ -124,6 +124,14 @@ export const usersAPI = {
   getDosen: () => api.get('/users/dosen'),
 };
 
+// ============= INTEGRATION API (Zotero) =============
+export const integrationAPI = {
+  connectZotero: (data) => api.post('/integration/zotero/connect', data),
+  syncZotero: () => api.post('/integration/zotero/sync'),
+  getReferences: () => api.get('/integration/references'),
+  analyzeZotero: (refId) => api.post(`/integration/zotero/analyze/${refId}`),
+};
+
 // ============= DOSEN API =============
 export const dosenAPI = {
   // Dashboard & Stats

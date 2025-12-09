@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 // --- 2. Import Icons & Context ---
 import { BookOpen, AlertCircle, CheckCircle2, GraduationCap, UserCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CaptchaInput from '@/components/CaptchaInput';
 
@@ -18,6 +19,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { loginWithCaptcha } = useAuth();
+  const { t } = useLanguage();
 
   // --- 3. State Management ---
   const [role, setRole] = useState('mahasiswa'); // Default to mahasiswa
@@ -100,11 +102,11 @@ const Login = () => {
       
       // Handle specific error cases
       if (err.response?.status === 429) {
-        setError('Too many login attempts. Please try again later.');
+        setError(t('auth.tooManyAttempts'));
       } else if (err.response?.data?.detail) {
         setError(err.response.data.detail);
       } else {
-        setError('Login failed. Please check your credentials and CAPTCHA.');
+        setError(t('auth.loginFailed'));
       }
       
       setLoading(false);
@@ -131,14 +133,14 @@ const Login = () => {
           </div>
           
           <h1 className="text-4xl font-serif font-bold text-foreground mb-2">Refero</h1>
-          <p className="text-muted-foreground">Your AI Research Companion</p>
-          <p className="text-sm text-muted-foreground mt-1">Telkom University - S1 Sistem Informasi</p>
+          <p className="text-muted-foreground">{t('auth.aiResearchCompanion')}</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('auth.telkomUniversity')}</p>
         </div>
 
         <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-serif">Welcome Back</CardTitle>
-            <CardDescription>Choose your role and sign in</CardDescription>
+            <CardTitle className="text-2xl font-serif">{t('auth.welcomeBack')}</CardTitle>
+            <CardDescription>{t('auth.chooseRole')}</CardDescription>
           </CardHeader>
           
           <CardContent>
@@ -162,11 +164,11 @@ const Login = () => {
               <TabsList className="grid w-full grid-cols-2 mb-6 h-12">
                 <TabsTrigger value="mahasiswa" className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                   <GraduationCap className="w-4 h-4" />
-                  <span className="font-medium">Student</span>
+                  <span className="font-medium">{t('auth.student')}</span>
                 </TabsTrigger>
                 <TabsTrigger value="dosen" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
                   <UserCheck className="w-4 h-4" />
-                  <span className="font-medium">Lecturer</span>
+                  <span className="font-medium">{t('auth.lecturer')}</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -174,9 +176,9 @@ const Login = () => {
               <div className="mb-4 text-center">
                 <p className="text-sm text-muted-foreground">
                   {role === 'mahasiswa' ? (
-                    <>👨‍🎓 Logging in as <span className="font-semibold text-blue-600">Student</span></>
+                    <>👨‍🎓 {t('auth.loggingInAs')} <span className="font-semibold text-blue-600">{t('auth.student')}</span></>
                   ) : (
-                    <>👨‍🏫 Logging in as <span className="font-semibold text-green-600">Lecturer</span></>
+                    <>👨‍🏫 {t('auth.loggingInAs')} <span className="font-semibold text-green-600">{t('auth.lecturer')}</span></>
                   )}
                 </p>
               </div>
@@ -185,12 +187,12 @@ const Login = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <TabsContent value="mahasiswa" className="mt-0 space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Student Email</Label>
+                    <Label htmlFor="email">{t('auth.studentEmail')}</Label>
                     <Input
                       id="email"
                       name="email"
                       type="email"
-                      placeholder="student@university.ac.id"
+                      placeholder={`student${t('auth.emailPlaceholder')}`}
                       value={formData.email}
                       onChange={handleChange}
                       required
@@ -201,12 +203,12 @@ const Login = () => {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">{t('auth.password')}</Label>
                       <Link 
                         to="/forgot-password" 
                         className="text-xs text-muted-foreground hover:text-primary transition-colors"
                       >
-                        Forgot password?
+                        {t('auth.forgotPassword')}
                       </Link>
                     </div>
                     <Input
@@ -224,12 +226,12 @@ const Login = () => {
 
                 <TabsContent value="dosen" className="mt-0 space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email-dosen">Lecturer Email</Label>
+                    <Label htmlFor="email-dosen">{t('auth.lecturerEmail')}</Label>
                     <Input
                       id="email-dosen"
                       name="email"
                       type="email"
-                      placeholder="lecturer@university.ac.id"
+                      placeholder={`lecturer${t('auth.emailPlaceholder')}`}
                       value={formData.email}
                       onChange={handleChange}
                       required
@@ -274,10 +276,10 @@ const Login = () => {
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                      Signing in as {role === 'dosen' ? 'Lecturer' : 'Student'}...
+                      {t('auth.loggingInAs')} {role === 'dosen' ? t('auth.lecturer') : t('auth.student')}...
                     </div>
                   ) : (
-                    `Sign In as ${role === 'dosen' ? 'Lecturer' : 'Student'}`
+                    `${t('auth.signIn')}`
                   )}
                 </Button>
               </form>
@@ -286,9 +288,9 @@ const Login = () => {
             {/* Register Link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Don't have an account?{' '}
+                {t('auth.dontHaveAccount')}{' '}
                 <Link to="/register" className="text-primary hover:text-primary/80 font-semibold hover:underline">
-                  Register here
+                  {t('auth.signUp')}
                 </Link>
               </p>
             </div>

@@ -19,10 +19,10 @@ import { toast } from 'sonner';
 import { 
   ArrowLeft, Download, Trash2, Brain, FileText, 
   Tag, Plus, Clock, CheckCircle2, AlertCircle,
-  Sparkles, BookOpen, X
+  Sparkles, BookOpen, X, Upload, HelpCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { documentsAPI, nlpAPI, tagsAPI } from '../services/api';
+import { documentsAPI, nlpAPI, tagsAPI, mendeleyAPI } from '../services/api';
 
 const DocumentDetail = () => {
   const { id } = useParams();
@@ -184,6 +184,8 @@ const DocumentDetail = () => {
       toast.error('Failed to remove tag');
     }
   };
+
+
 
   // --- 6. Render UI Modern ---
 

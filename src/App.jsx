@@ -26,6 +26,7 @@ import PilihPembimbing from './pages/PilihPembimbing';
 import DosenPembimbingSaya from './pages/DosenPembimbingSaya';
 import DosenRequestBimbingan from './pages/DosenRequestBimbingan';
 import DosenPendingReferensi from './pages/DosenPendingReferensi';
+import MahasiswaReferensi from './pages/MahasiswaReferensi';
 import Profile from './pages/Profile';
 import Documents from './pages/Documents';
 import Footer from '@/components/Footer';
@@ -126,6 +127,15 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Visualization />
+                  </PrivateRoute>
+                } 
+              />
+              
+              <Route 
+                path="/mahasiswa/referensi" 
+                element={
+                  <PrivateRoute>
+                    <MahasiswaReferensi />
                   </PrivateRoute>
                 } 
               />

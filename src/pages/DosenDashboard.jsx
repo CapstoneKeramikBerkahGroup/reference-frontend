@@ -418,7 +418,6 @@ const DosenDashboard = () => {
                     <TableHead>Angkatan</TableHead>
                     <TableHead className="text-center">Dokumen</TableHead>
                     <TableHead className="text-center">Completed</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -435,16 +434,6 @@ const DosenDashboard = () => {
                         <Badge variant={mhs.dokumen_completed > 0 ? 'default' : 'outline'}>
                           {mhs.dokumen_completed}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewMahasiswaDokumen(mhs.id, mhs.nama)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View Docs
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -532,20 +521,6 @@ const DosenDashboard = () => {
                         <div className="flex-1">
                           <p className="font-medium">{mhs.nama}</p>
                           <p className="text-sm text-muted-foreground">{mhs.nim} • {mhs.program_studi}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <Badge variant={mhs.total_dokumen > 0 ? 'default' : 'secondary'}>
-                              {mhs.total_dokumen} docs
-                            </Badge>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewMahasiswaDokumen(mhs.id, mhs.nama)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
                     ))}

@@ -288,19 +288,12 @@ const DosenPembimbingSaya = () => {
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex gap-4">
+            <div className="flex justify-center">
               <Button
                 onClick={() => navigate('/mahasiswa/dashboard')}
                 variant="outline"
-                className="flex-1"
               >
                 Kembali ke Dashboard
-              </Button>
-              <Button
-                onClick={() => navigate('/dashboard')}
-                className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-              >
-                Lihat Dokumen Bimbingan
               </Button>
             </div>
           </div>

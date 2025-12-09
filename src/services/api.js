@@ -157,6 +157,24 @@ export const dosenAPI = {
 export const mahasiswaAPI = {
   // Pilih Dosen Pembimbing
   chooseDosen: (dosenId) => api.put(`/users/mahasiswa/choose-dosen/${dosenId}`),
+  
+  // Referensi Management
+  getMyReferences: (params) => api.get('/documents/referensi/my-references', { params }),
+  getReferencesSummary: () => api.get('/documents/referensi/summary'),
+};
+
+// ============= MENDELEY API =============
+export const mendeleyAPI = {
+  // Manual file import
+  importReferences: (dokumenId, formData) => api.post(`/mendeley/import-mendeley/${dokumenId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  getExportGuide: () => api.get('/mendeley/export-guide'),
+  
+  // OAuth sync
+  getAuthorizationUrl: (dokumenId) => api.get(`/mendeley/oauth/authorize?dokumen_id=${dokumenId}`),
+  syncLibrary: (dokumenId, accessToken) => api.post(`/mendeley/sync/${dokumenId}?access_token=${accessToken}`),
+  testConnection: (accessToken) => api.get(`/mendeley/test-connection?access_token=${accessToken}`),
 };
 
 export default api;

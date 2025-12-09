@@ -314,64 +314,6 @@ const DosenPendingReferensi = () => {
           </p>
         </div>
 
-        {/* Action Required - Papers Only */}
-        {pendingDocuments.length > 0 && (
-          <Card className="border-2 border-yellow-200 dark:border-yellow-900 bg-yellow-50/50 dark:bg-yellow-950/20">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                  <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Action Required</CardTitle>
-                  <CardDescription className="text-base">
-                    {pendingDocuments.length} document{pendingDocuments.length > 1 ? 's' : ''} waiting for your review
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {pendingDocuments.slice(0, 5).map((doc) => (
-                  <div
-                    key={doc.dokumen_id}
-                    className="flex items-center justify-between p-4 bg-background rounded-lg border hover:border-primary transition-all cursor-pointer group"
-                    onClick={() => handleViewDocument(doc.dokumen_id)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                        <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">
-                          {doc.dokumen_judul}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground ml-8">
-                        <span>{doc.mahasiswa_nama}</span>
-                        <span>•</span>
-                        <Badge variant="secondary" className="font-semibold">
-                          {doc.pending_count} pending
-                        </Badge>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="ml-4" onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewDocument(doc.dokumen_id);
-                    }}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Review
-                    </Button>
-                  </div>
-                ))}
-                {pendingDocuments.length > 5 && (
-                  <p className="text-sm text-muted-foreground text-center pt-2">
-                    And {pendingDocuments.length - 5} more document{pendingDocuments.length - 5 > 1 ? 's' : ''}...
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>

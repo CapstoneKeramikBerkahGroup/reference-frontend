@@ -287,13 +287,13 @@ const DosenDokumenDetail = () => {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl mb-2">{dokumen.judul || 'Untitled Document'}</CardTitle>
+              <div className="flex-1 min-w-0 pr-4">
+                <CardTitle className="text-2xl mb-2 break-words">{dokumen.judul || 'Untitled Document'}</CardTitle>
                 <CardDescription>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="flex items-center gap-1">
-                      <FileText className="w-4 h-4" />
-                      {dokumen.nama_file}
+                  <div className="flex items-center gap-4 text-sm flex-wrap">
+                    <span className="flex items-center gap-1 min-w-0">
+                      <FileText className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate" title={dokumen.nama_file}>{dokumen.nama_file}</span>
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />

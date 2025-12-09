@@ -81,6 +81,7 @@ const Navbar = () => {
   const studentNavItems = [
     { path: '/dashboard', label: t('nav.dashboard'), icon: Home },
     { path: '/documents', label: t('nav.documents'), icon: FileText },
+    { path: '/mahasiswa/referensi', label: 'Referensi Saya', icon: CheckSquare },
     { path: '/visualization', label: t('nav.visualization'), icon: BarChart3 },
   ];
 

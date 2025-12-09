@@ -9,27 +9,33 @@ import { toast } from 'sonner';
 
 // --- 2. Import Icons & Context ---
 import { 
-  Download, Trash2, Eye, FileText, FolderOpen, Clock 
+  Download, Trash2, Eye, FileText, FolderOpen, Clock, CloudDownload, Link2 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { documentsAPI } from '../services/api';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
+import api from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // --- 3. State Management (Dari Kode Lama Anda) ---
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mendeleyLoading, setMendeleyLoading] = useState(false);
+  const [mendeleyConnected, setMendeleyConnected] = useState(false);
+  const [mendeleyStatus, setMendeleyStatus] = useState(null);
   
   // --- 4. Logika Backend (Dipertahankan & Disesuaikan) ---
 
   useEffect(() => {
     loadDocuments();
+    checkMendeleyCallback();
+    checkMendeleyStatus();
   }, []);
 
   const loadDocuments = async () => {
@@ -76,6 +82,103 @@ const Dashboard = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const checkMendeleyCallback = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mendeleySync = urlParams.get('mendeley_sync');
+    const imported = urlParams.get('imported');
+    const errorMessage = urlParams.get('message');
+
+    if (mendeleySync === 'success') {
+      const importedCount = parseInt(imported) || 0;
+      if (importedCount > 0) {
+        toast.success(t('mendeley.imported', { count: importedCount }).replace('{count}', importedCount));
+      } else {
+        toast.info(t('messages.info.allPapersExist'));
+      }
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Reload documents to show new ones
+      loadDocuments();
+      checkMendeleyStatus();
+    } else if (mendeleySync === 'error') {
+      toast.error(`Gagal sinkronisasi: ${errorMessage}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+
+  const checkMendeleyStatus = async () => {
+    try {
+      const response = await api.get('/mendeley/status');
+      setMendeleyConnected(response.data.connected);
+      setMendeleyStatus(response.data);
+    } catch (err) {
+      console.error('Failed to check Mendeley status:', err);
+    }
+  };
+
+  const handleConnectMendeley = async () => {
+    try {
+      setMendeleyLoading(true);
+      
+      // Call authorize endpoint without dokumen_id
+      const response = await api.get('/mendeley/oauth/authorize');
+      
+      if (response.data.authorization_url) {
+        // Redirect to Mendeley authorization (will come back to this page)
+        window.location.href = response.data.authorization_url;
+      } else {
+        toast.error('Gagal mendapatkan authorization URL');
+        setMendeleyLoading(false);
+      }
+    } catch (err) {
+      console.error('Mendeley auth error:', err);
+      const errorMsg = err.response?.data?.detail || err.message || t('messages.error.mendeleyFailed');
+      toast.error(errorMsg);
+      setMendeleyLoading(false);
+    }
+  };
+
+  const handleRefreshMendeley = async () => {
+    try {
+      setMendeleyLoading(true);
+      const response = await api.post('/mendeley/refresh');
+      
+      const imported = response.data.imported || 0;
+      const skipped = response.data.skipped_count || 0;
+      
+      if (imported > 0) {
+        toast.success(t('mendeley.imported', { count: imported }).replace('{count}', imported));
+      } else if (skipped > 0) {
+        toast.info(t('mendeley.allExist', { count: skipped }).replace('{count}', skipped));
+      } else {
+        toast.info(t('mendeley.noNew'));
+      }
+      
+      // Reload documents
+      await loadDocuments();
+      await checkMendeleyStatus();
+    } catch (err) {
+      console.error('Mendeley refresh error:', err);
+      const errorMsg = err.response?.data?.detail || t('messages.error.mendeleyRefreshFailed');
+      toast.error(errorMsg);
+    } finally {
+      setMendeleyLoading(false);
+    }
+  };
+
+  const handleDisconnectMendeley = async () => {
+    if (!confirm(t('mendeley.confirmDisconnect'))) return;
+    
+    try {
+      await api.post('/mendeley/disconnect');
+      setMendeleyConnected(false);
+      setMendeleyStatus(null);
+      toast.success(t('messages.success.mendeleyDisconnected'));
+    } catch (err) {
+      toast.error(t('messages.error.mendeleyFailed'));
+    }
   };
 
   // --- 5. Helper UI (Dari Lovable) ---
@@ -162,6 +265,87 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Mendeley Integration Card */}
+        <Card className="mb-8 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-purple-600 rounded-xl flex items-center justify-center">
+                  <CloudDownload className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {t('mendeley.title')}
+                    </h3>
+                    {mendeleyConnected && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓ {t('mendeley.connected')}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {mendeleyConnected 
+                      ? `${t('mendeley.lastSync')}: ${mendeleyStatus?.last_sync ? new Date(mendeleyStatus.last_sync).toLocaleString(language === 'id' ? 'id-ID' : 'en-US') : t('mendeley.neverSynced')}`
+                      : t('mendeley.description')
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                {!mendeleyConnected ? (
+                  <Button 
+                    onClick={handleConnectMendeley}
+                    disabled={mendeleyLoading}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    size="lg"
+                  >
+                    {mendeleyLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        {t('mendeley.connecting')}
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-4 h-4 mr-2" />
+                        {t('mendeley.connect')}
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      onClick={handleRefreshMendeley}
+                      disabled={mendeleyLoading}
+                      variant="outline"
+                      size="lg"
+                      className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                    >
+                      {mendeleyLoading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-700"></div>
+                      ) : (
+                        <>
+                          <CloudDownload className="w-4 h-4 mr-2" />
+                          {t('mendeley.refresh')}
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      onClick={handleDisconnectMendeley}
+                      variant="outline"
+                      size="lg"
+                      className="border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      {t('mendeley.disconnect')}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Recent Documents - Quick Access */}
         <div className="mb-6">

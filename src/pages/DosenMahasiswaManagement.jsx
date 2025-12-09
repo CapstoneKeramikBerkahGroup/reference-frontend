@@ -238,7 +238,6 @@ const DosenMahasiswaManagement = () => {
                   <TableHead>Nama</TableHead>
                   <TableHead>Program Studi</TableHead>
                   <TableHead>Angkatan</TableHead>
-                  <TableHead className="text-center">Dokumen</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -249,11 +248,6 @@ const DosenMahasiswaManagement = () => {
                     <TableCell className="font-medium">{mhs.nama}</TableCell>
                     <TableCell>{mhs.program_studi}</TableCell>
                     <TableCell>{mhs.angkatan}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={mhs.total_dokumen > 0 ? 'default' : 'secondary'}>
-                        {mhs.total_dokumen || 0}
-                      </Badge>
-                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="destructive"

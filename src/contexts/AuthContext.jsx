@@ -60,6 +60,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithCaptcha = async (credentials) => {
+    try {
+      const response = await authAPI.loginWithCaptcha(credentials);
+      const { access_token } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      
+      // Setelah dapat token, ambil data user lengkap
+      const userResponse = await authAPI.getMe();
+      setUser(userResponse.data);
+      localStorage.setItem('user', JSON.stringify(userResponse.data));
+      
+      return userResponse.data;
+    } catch (error) {
+      console.error("Login with CAPTCHA error:", error);
+      throw error;
+    }
+  };
+
   const register = async (userData, role) => {
     try {
       if (role === 'mahasiswa') {
@@ -75,6 +94,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const userResponse = await authAPI.getMe();
+      setUser(userResponse.data);
+      localStorage.setItem('user', JSON.stringify(userResponse.data));
+      return userResponse.data;
+    } catch (error) {
+      console.error("Refresh user error:", error);
+      throw error;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -86,7 +117,9 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    loginWithCaptcha,
     register,
+    refreshUser,
     logout,
     isAuthenticated: !!user,
     isMahasiswa: user?.role === 'mahasiswa',

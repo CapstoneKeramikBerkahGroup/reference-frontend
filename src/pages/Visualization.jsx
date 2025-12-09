@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// --- Components ---
+import Navbar from '@/components/Navbar';
+
 // --- 1. Import Komponen Shadcn UI ---
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,11 +119,11 @@ const Visualization = () => {
     {
       selector: 'node:selected',
       style: {
-        'background-color': '#f43f5e', // Rose-500
+        'background-color': '#0891b2', // Cyan-600
         'width': 50,
         'height': 50,
         'border-width': 4,
-        'border-color': '#fecdd3', // Rose-200
+        'border-color': '#a5f3fc', // Cyan-200
         'shadow-blur': 10,
         'shadow-color': '#000'
       }
@@ -139,7 +142,7 @@ const Visualization = () => {
     {
       selector: 'edge:selected',
       style: {
-        'line-color': '#f43f5e',
+        'line-color': '#0891b2',
         'width': 4,
         'opacity': 1,
         'z-index': 9
@@ -187,27 +190,29 @@ const Visualization = () => {
 
   // --- Render UI ---
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Navbar />
       
       {/* Header */}
-      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50 h-16">
+      <header className="border-b border-cyan-200 bg-white sticky top-16 z-40 h-16">
         <div className="container h-full mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Dashboard
-            </Button>
-            <div className="h-6 w-px bg-border/50"></div>
-            <h1 className="text-lg font-serif font-semibold">Knowledge Graph</h1>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-lg flex items-center justify-center">
+                <Share2 className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-xl font-serif font-semibold text-gray-900">Grafik Pengetahuan</h1>
+            </div>
           </div>
           
-          <Button variant="outline" size="sm" onClick={() => loadVisualization()} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => loadVisualization()} disabled={loading} className="border-cyan-300 text-cyan-700 hover:bg-cyan-50">
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh Data
+            Segarkan Data
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-6 overflow-hidden flex flex-col lg:flex-row gap-6 h-[calc(100vh-64px)]">
+      <main className="flex-1 container mx-auto px-4 py-6 overflow-hidden flex flex-col lg:flex-row gap-6 h-[calc(100vh-128px)]">
         
         {/* Left Sidebar: Controls & Info */}
         <div className="w-full lg:w-80 flex flex-col gap-6 overflow-y-auto pb-6 h-full">
@@ -225,16 +230,16 @@ const Visualization = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-primary" />
-                Similarity Threshold
+                Ambang Batas Kesamaan
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs text-muted-foreground">Loose</span>
+                <span className="text-xs text-muted-foreground">Longgar</span>
                 <Badge variant="secondary" className="font-mono">
                   {((Array.isArray(threshold) ? threshold[0] : threshold) * 100).toFixed(0)}%
                 </Badge>
-                <span className="text-xs text-muted-foreground">Strict</span>
+                <span className="text-xs text-muted-foreground">Ketat</span>
               </div>
               <Slider
                 defaultValue={[0.3]}
@@ -245,7 +250,7 @@ const Visualization = () => {
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground mt-4">
-                Adjust to filter connections. Higher values show only stronger relationships.
+                Sesuaikan untuk memfilter koneksi. Nilai yang lebih tinggi hanya menampilkan hubungan yang lebih kuat.
               </p>
             </CardContent>
           </Card>
@@ -255,7 +260,7 @@ const Visualization = () => {
             <CardHeader className="pb-3 bg-accent/5">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Info className="w-4 h-4 text-primary" />
-                Node Details
+                Detail Node
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 pt-4 overflow-y-auto">
@@ -295,7 +300,7 @@ const Visualization = () => {
                   <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-3">
                     <Share2 className="w-6 h-6 opacity-50" />
                   </div>
-                  <p className="text-sm">Click on a node to view details</p>
+                  <p className="text-sm">Klik pada node untuk melihat detail</p>
                 </div>
               )}
             </CardContent>
@@ -306,13 +311,13 @@ const Visualization = () => {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-primary">{graphData.nodes.length}</p>
-                <p className="text-xs text-muted-foreground">Papers</p>
+                <p className="text-xs text-muted-foreground">Makalah</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-primary">{graphData.edges.length}</p>
-                <p className="text-xs text-muted-foreground">Links</p>
+                <p className="text-xs text-muted-foreground">Tautan</p>
               </CardContent>
             </Card>
           </div>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Typography, Button, Container, Paper } from '@mui/material';
-import ErrorIcon from '@mui/icons-material/Error';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle } from 'lucide-react';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,31 +15,26 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
-    this.state = { hasError: true, error, errorInfo };
+    this.setState({ hasError: true, error, errorInfo });
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <Container maxWidth="sm">
-          <Box
-            sx={{
-              minHeight: '100vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
-              <ErrorIcon sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
-              <Typography variant="h5" gutterBottom>
-                Oops! Something went wrong
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <AlertCircle className="w-16 h-16 text-destructive" />
+              </div>
+              <CardTitle className="text-2xl">Oops! Something went wrong</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-center text-muted-foreground">
                 {this.state.error?.message || 'An unexpected error occurred'}
-              </Typography>
+              </p>
               <Button
-                variant="contained"
+                className="w-full"
                 onClick={() => {
                   this.setState({ hasError: false });
                   window.location.href = '/';
@@ -47,15 +43,15 @@ class ErrorBoundary extends React.Component {
                 Go to Home
               </Button>
               {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
-                <Box sx={{ mt: 2, textAlign: 'left' }}>
-                  <Typography variant="caption" component="pre" sx={{ fontSize: 10, overflow: 'auto' }}>
+                <div className="mt-4 p-4 bg-muted rounded-md">
+                  <pre className="text-xs overflow-auto max-h-48">
                     {this.state.errorInfo.componentStack}
-                  </Typography>
-                </Box>
+                  </pre>
+                </div>
               )}
-            </Paper>
-          </Box>
-        </Container>
+            </CardContent>
+          </Card>
+        </div>
       );
     }
 

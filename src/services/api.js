@@ -49,6 +49,18 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   
   logout: () => api.post('/auth/logout'),
+  
+  // CAPTCHA
+  getCaptcha: () => api.get('/auth/captcha'),
+  
+  loginWithCaptcha: (data) => api.post('/auth/login/captcha', data),
+  
+  // Forgot Password
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  
+  verifyCode: (email, code) => api.post('/auth/verify-code', { email, code }),
+  
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 // ============= DOCUMENTS API =============
@@ -60,13 +72,18 @@ export const documentsAPI = {
   
   getAll: (params) => api.get('/documents/', { params }),
   
-  getById: (id) => api.get(`/documents/${id}`),
+  getById: (id) => api.get(`/documents/doc/${id}`),
   
-  download: (id) => api.get(`/documents/download/${id}`, {
+  download: (id) => api.get(`/documents/doc/${id}/download`, {
     responseType: 'blob',
   }),
   
-  delete: (id) => api.delete(`/documents/${id}`),
+  downloadCompilation: (params = {}) => api.get('/documents/compilation/download', {
+    params,
+    responseType: 'blob',
+  }),
+  
+  delete: (id) => api.delete(`/documents/doc/${id}`),
   
   search: (query) => api.get('/documents/search', { params: { q: query } }),
 };
@@ -77,9 +94,9 @@ export const tagsAPI = {
   
   create: (name) => api.post('/documents/tags', { nama_tag: name }),
   
-  addToDocument: (documentId, tagId) => api.post(`/documents/${documentId}/tags/${tagId}`),
+  addToDocument: (documentId, tagId) => api.post(`/documents/doc/${documentId}/tags/${tagId}`),
   
-  removeFromDocument: (documentId, tagId) => api.delete(`/documents/${documentId}/tags/${tagId}`),
+  removeFromDocument: (documentId, tagId) => api.delete(`/documents/doc/${documentId}/tags/${tagId}`),
 };
 
 // ============= NLP API =============
@@ -107,11 +124,65 @@ export const usersAPI = {
   getDosen: () => api.get('/users/dosen'),
 };
 
+// ============= INTEGRATION API (Zotero) =============
 export const integrationAPI = {
   connectZotero: (data) => api.post('/integration/zotero/connect', data),
   syncZotero: () => api.post('/integration/zotero/sync'),
   getReferences: () => api.get('/integration/references'),
   analyzeZotero: (refId) => api.post(`/integration/zotero/analyze/${refId}`),
+};
+
+// ============= DOSEN API =============
+export const dosenAPI = {
+  // Dashboard & Stats
+  getDashboardStats: () => api.get('/dosen/dashboard/stats'),
+  
+  // Mahasiswa Assignment
+  getAvailableDosen: () => api.get('/dosen/available-dosen'),
+  assignMahasiswa: (mahasiswaId) => api.post(`/dosen/assign-mahasiswa/${mahasiswaId}`),
+  removeMahasiswa: (mahasiswaId) => api.delete(`/dosen/remove-mahasiswa/${mahasiswaId}`),
+  
+  // Mahasiswa Bimbingan
+  getMahasiswaBimbingan: () => api.get('/dosen/mahasiswa'),
+  getMahasiswaDocuments: (mahasiswaId) => api.get(`/dosen/mahasiswa/${mahasiswaId}/dokumen`),
+  
+  // Dokumen Detail
+  getDokumenDetail: (dokumenId) => api.get(`/dosen/dokumen/${dokumenId}`),
+  
+  // Catatan (Comments)
+  addCatatan: (dokumenId, data) => api.post(`/dosen/dokumen/${dokumenId}/catatan`, data),
+  getCatatan: (dokumenId) => api.get(`/dosen/dokumen/${dokumenId}/catatan`),
+  updateCatatan: (catatanId, data) => api.put(`/dosen/catatan/${catatanId}`, data),
+  deleteCatatan: (catatanId) => api.delete(`/dosen/catatan/${catatanId}`),
+  
+  // Validasi Referensi
+  validateReferensi: (referensiId, data) => api.put(`/dosen/referensi/${referensiId}/validate`, data),
+  getPendingReferensi: () => api.get('/dosen/referensi/pending'),
+  getReferensiHistory: (params) => api.get('/dosen/referensi/history', { params }),
+};
+
+// ============= MAHASISWA API =============
+export const mahasiswaAPI = {
+  // Pilih Dosen Pembimbing
+  chooseDosen: (dosenId) => api.put(`/users/mahasiswa/choose-dosen/${dosenId}`),
+  
+  // Referensi Management
+  getMyReferences: (params) => api.get('/documents/referensi/my-references', { params }),
+  getReferencesSummary: () => api.get('/documents/referensi/summary'),
+};
+
+// ============= MENDELEY API =============
+export const mendeleyAPI = {
+  // Manual file import
+  importReferences: (dokumenId, formData) => api.post(`/mendeley/import-mendeley/${dokumenId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  getExportGuide: () => api.get('/mendeley/export-guide'),
+  
+  // OAuth sync
+  getAuthorizationUrl: (dokumenId) => api.get(`/mendeley/oauth/authorize?dokumen_id=${dokumenId}`),
+  syncLibrary: (dokumenId, accessToken) => api.post(`/mendeley/sync/${dokumenId}?access_token=${accessToken}`),
+  testConnection: (accessToken) => api.get(`/mendeley/test-connection?access_token=${accessToken}`),
 };
 
 export default api;

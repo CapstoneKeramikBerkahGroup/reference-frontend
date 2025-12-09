@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 // --- UI Components ---
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -14,16 +13,20 @@ import { toast } from 'sonner';
 import { 
   Search, Upload, Download, Trash2, Eye, LogOut, 
   FileText, TrendingUp, Plus, FolderOpen, Clock, User, BookOpen, Scale, 
-  Link as LinkIcon, Book, LayoutGrid, Sparkles 
+  Link as LinkIcon, Book, LayoutGrid, Sparkles, CloudDownload, Link2 
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { documentsAPI, integrationAPI } from '../services/api'; // Pastikan integrationAPI sudah ada 'analyzeZotero'
+import { useLanguage } from '../contexts/LanguageContext';
+import { documentsAPI, integrationAPI } from '../services/api';
 import { format } from 'date-fns';
+import Navbar from '@/components/Navbar';
+import api from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { t, language } = useLanguage();
 
   // --- State Management ---
   const [activeTab, setActiveTab] = useState('uploads');
@@ -36,6 +39,9 @@ const Dashboard = () => {
   
   const [loading, setLoading] = useState(true);
   const [loadingRef, setLoadingRef] = useState(false);
+  const [mendeleyLoading, setMendeleyLoading] = useState(false);
+  const [mendeleyConnected, setMendeleyConnected] = useState(false);
+  const [mendeleyStatus, setMendeleyStatus] = useState(null);
 
   // State untuk Loading Analisis Zotero Per Item
   const [analyzingIds, setAnalyzingIds] = useState([]); 
@@ -50,11 +56,14 @@ const Dashboard = () => {
   useEffect(() => {
     loadDocuments();
     loadZoteroReferences();
+    checkMendeleyCallback();
+    checkMendeleyStatus();
   }, []);
 
   useEffect(() => {
     filterData();
   }, [searchQuery, documents, references, activeTab]);
+
 
   const loadDocuments = async () => {
     try {
@@ -150,13 +159,15 @@ const Dashboard = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this document?')) return;
+    if (!confirm(t('documentDetail.deleteConfirm'))) return;
+    
     try {
       await documentsAPI.delete(id);
-      toast.success('Document deleted');
-      loadDocuments();
+      toast.success(t('messages.success.deleted'));
+      await loadDocuments();
     } catch (err) {
-      toast.error('Failed to delete document');
+      console.error('Delete error:', err);
+      toast.error(t('messages.error.deleteFailed'));
     }
   };
 
@@ -170,9 +181,9 @@ const Dashboard = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('Download started');
+      toast.success(t('messages.success.downloadStarted'));
     } catch (err) {
-      toast.error('Download failed');
+      toast.error(t('messages.error.downloadFailed'));
     }
   };
 
@@ -181,11 +192,112 @@ const Dashboard = () => {
     navigate('/login');
   };
 
+  const checkMendeleyCallback = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mendeleySync = urlParams.get('mendeley_sync');
+    const imported = urlParams.get('imported');
+    const errorMessage = urlParams.get('message');
+
+    if (mendeleySync === 'success') {
+      const importedCount = parseInt(imported) || 0;
+      if (importedCount > 0) {
+        toast.success(t('mendeley.imported', { count: importedCount }).replace('{count}', importedCount));
+      } else {
+        toast.info(t('messages.info.allPapersExist'));
+      }
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Reload documents to show new ones
+      loadDocuments();
+      checkMendeleyStatus();
+    } else if (mendeleySync === 'error') {
+      toast.error(`Gagal sinkronisasi: ${errorMessage}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+
+  const checkMendeleyStatus = async () => {
+    try {
+      const response = await api.get('/mendeley/status');
+      setMendeleyConnected(response.data.connected);
+      setMendeleyStatus(response.data);
+    } catch (err) {
+      console.error('Failed to check Mendeley status:', err);
+    }
+  };
+
+  const handleConnectMendeley = async () => {
+    try {
+      setMendeleyLoading(true);
+      
+      // Call authorize endpoint without dokumen_id
+      const response = await api.get('/mendeley/oauth/authorize');
+      
+      if (response.data.authorization_url) {
+        // Redirect to Mendeley authorization (will come back to this page)
+        window.location.href = response.data.authorization_url;
+      } else {
+        toast.error('Gagal mendapatkan authorization URL');
+        setMendeleyLoading(false);
+      }
+    } catch (err) {
+      console.error('Mendeley auth error:', err);
+      const errorMsg = err.response?.data?.detail || err.message || t('messages.error.mendeleyFailed');
+      toast.error(errorMsg);
+      setMendeleyLoading(false);
+    }
+  };
+
+  const handleRefreshMendeley = async () => {
+    try {
+      setMendeleyLoading(true);
+      const response = await api.post('/mendeley/refresh');
+      
+      const imported = response.data.imported || 0;
+      const skipped = response.data.skipped_count || 0;
+      
+      if (imported > 0) {
+        toast.success(t('mendeley.imported', { count: imported }).replace('{count}', imported));
+      } else if (skipped > 0) {
+        toast.info(t('mendeley.allExist', { count: skipped }).replace('{count}', skipped));
+      } else {
+        toast.info(t('mendeley.noNew'));
+      }
+      
+      // Reload documents
+      await loadDocuments();
+      await checkMendeleyStatus();
+    } catch (err) {
+      console.error('Mendeley refresh error:', err);
+      const errorMsg = err.response?.data?.detail || t('messages.error.mendeleyRefreshFailed');
+      toast.error(errorMsg);
+    } finally {
+      setMendeleyLoading(false);
+    }
+  };
+
+  const handleDisconnectMendeley = async () => {
+    if (!confirm(t('mendeley.confirmDisconnect'))) return;
+    
+    try {
+      await api.post('/mendeley/disconnect');
+      setMendeleyConnected(false);
+      setMendeleyStatus(null);
+      toast.success(t('messages.success.mendeleyDisconnected'));
+    } catch (err) {
+      toast.error(t('messages.error.mendeleyFailed'));
+    }
+  };
+
+  // --- 5. Helper UI ---
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'completed': return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">Processed</Badge>;
-      case 'processing': return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200">Processing</Badge>;
-      default: return <Badge variant="outline">Pending</Badge>;
+      case 'completed':
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">{t('documentDetail.status.completed')}</Badge>;
+      case 'processing':
+        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200">{t('documentDetail.status.processing')}</Badge>;
+      default:
+        return <Badge variant="outline">{t('documentDetail.status.pending')}</Badge>;
     }
   };
 
@@ -201,74 +313,40 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your research...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background">
-      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-serif font-bold text-foreground">Refero</h1>
-                <p className="text-xs text-muted-foreground hidden sm:block">Your Research Companion</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => navigate('/visualization')} className="hidden md:flex">
-                <TrendingUp className="w-4 h-4 mr-2" /> Visualization
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/comparison')} className="hidden md:flex">
-                <Scale className="w-4 h-4 mr-2" /> Gap Analysis
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/draft')} className="hidden md:flex">
-                <FileText className="w-4 h-4 mr-2" /> Draft TA
-              </Button>
-              
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/50">
-                <User className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium hidden sm:block">{user?.nama}</span>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-destructive">
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
 
       <main className="container mx-auto px-4 lg:px-8 py-8">
         
         {/* STATS CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+          <Card className="border-cyan-200 bg-white shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Documents</p>
-                  <p className="text-3xl font-bold text-foreground">{documents.length}</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('dashboard.totalDocuments')}</p>
+                  <p className="text-3xl font-bold text-gray-900">{documents.length}</p>
                 </div>
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-cyan-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+          <Card className="border-green-200 bg-white shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Processed</p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-sm text-gray-600 mb-1">{t('dashboard.processed')}</p>
+                  <p className="text-3xl font-bold text-gray-900">
                     {documents.filter(d => d.status_analisis === 'completed').length}
                   </p>
                 </div>
@@ -279,80 +357,103 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+          <Card className="border-amber-200 bg-white shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Zotero Items</p>
-                  <p className="text-3xl font-bold text-foreground">{references.length}</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('dashboard.processing')}</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {documents.filter(d => d.status_analisis === 'processing').length}
+                  </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Book className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* SEARCH & ACTIONS */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder={activeTab === 'uploads' ? "Search uploaded documents..." : "Search Zotero library..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 bg-card border-border/50"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            {activeTab === 'uploads' && (
-                <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                    <DialogTrigger asChild>
-                    <Button size="lg" className="h-11">
-                        <Plus className="w-4 h-4 mr-2" /> Upload Document
+        {/* Mendeley Integration Card */}
+        <Card className="mb-8 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-purple-600 rounded-xl flex items-center justify-center">
+                  <CloudDownload className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {t('mendeley.title')}
+                    </h3>
+                    {mendeleyConnected && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓ {t('mendeley.connected')}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {mendeleyConnected 
+                      ? `${t('mendeley.lastSync')}: ${mendeleyStatus?.last_sync ? new Date(mendeleyStatus.last_sync).toLocaleString(language === 'id' ? 'id-ID' : 'en-US') : t('mendeley.neverSynced')}`
+                      : t('mendeley.description')
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                {!mendeleyConnected ? (
+                  <Button 
+                    onClick={handleConnectMendeley}
+                    disabled={mendeleyLoading}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    size="lg"
+                  >
+                    {mendeleyLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        {t('mendeley.connecting')}
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-4 h-4 mr-2" />
+                        {t('mendeley.connect')}
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      onClick={handleRefreshMendeley}
+                      disabled={mendeleyLoading}
+                      variant="outline"
+                      size="lg"
+                      className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                    >
+                      {mendeleyLoading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-700"></div>
+                      ) : (
+                        <>
+                          <CloudDownload className="w-4 h-4 mr-2" />
+                          {t('mendeley.refresh')}
+                        </>
+                      )}
                     </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="font-serif">Upload Research Papers</DialogTitle>
-                        <DialogDescription>Upload PDF or DOCX files for AI analysis</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                        <Label htmlFor="title">Title (Optional)</Label>
-                        <Input id="title" placeholder="Document title" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="files">Select Files</Label>
-                        <div className="flex items-center justify-center w-full">
-                            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 border-gray-300">
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                    <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                                    <p className="text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                    <p className="text-xs text-gray-500">PDF or DOCX</p>
-                                </div>
-                                <input id="dropzone-file" type="file" className="hidden" multiple accept=".pdf,.doc,.docx" onChange={(e) => setUploadFiles(Array.from(e.target.files || []))} />
-                            </label>
-                        </div>
-                        {uploadFiles.length > 0 && <p className="text-sm text-green-600 font-medium mt-2">{uploadFiles.length} file(s) selected</p>}
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={handleUpload} disabled={uploading || uploadFiles.length === 0} className="w-full">
-                        {uploading ? 'Uploading...' : 'Start Upload'}
-                        </Button>
-                    </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            )}
-
-            <Button size="lg" variant="outline" className="h-11" onClick={() => navigate('/settings')}>
-                <LinkIcon className="w-4 h-4 mr-2" /> Zotero Connect
-            </Button>
-          </div>
-        </div>
+                    <Button 
+                      onClick={handleDisconnectMendeley}
+                      variant="outline"
+                      size="lg"
+                      className="border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      {t('mendeley.disconnect')}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* TAB SWITCHER */}
         <div className="mb-6 border-b border-border/40">

@@ -206,16 +206,16 @@ const PilihPembimbing = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header with University Branding */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="h-16 w-16 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Users className="h-8 w-8 text-white" />
+        <div className="mb-4 sm:mb-8">
+          <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4">
+            <div className="h-12 w-12 sm:h-16 sm:w-16 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Pilih Dosen Pembimbing</h1>
-              <p className="text-gray-600">
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-900 leading-tight">Pilih Dosen Pembimbing</h1>
+              <p className="text-xs sm:text-base text-gray-600 hidden sm:block">
                 Fakultas Rekayasa Industri - Program Studi S1 Sistem Informasi
               </p>
             </div>
@@ -247,19 +247,19 @@ const PilihPembimbing = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Daftar Dosen */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-start justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-2 mb-3 sm:mb-4">
+              <h2 className="text-base sm:text-xl font-semibold text-gray-900">
                 Dosen Pembimbing yang Tersedia
               </h2>
-              <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300">
-                <BookOpen className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300 text-[10px] sm:text-xs">
+                <BookOpen className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                 Peminatan: {user?.bidang_keahlian}
               </Badge>
             </div>
-            <Alert className="bg-blue-50 border-blue-200 mb-4">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800 text-sm">
+            <Alert className="bg-blue-50 border-blue-200 mb-3 sm:mb-4 py-2 sm:py-3">
+              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800 text-[11px] sm:text-sm">
                 Hanya menampilkan dosen dengan peminatan yang sama dengan Anda
               </AlertDescription>
             </Alert>
@@ -282,23 +282,21 @@ const PilihPembimbing = () => {
             ) : (
               dosenList.map((dosen) => (
                 <Card key={dosen.id} className="hover:shadow-md transition-shadow border-l-4 border-cyan-500">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="h-12 w-12 bg-cyan-100 rounded-full flex items-center justify-center">
-                          <User className="h-6 w-6 text-cyan-600" />
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                      <div className="flex items-start space-x-3 w-full sm:w-auto">
+                        <div className="h-10 w-10 sm:h-12 sm:w-12 bg-cyan-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-600" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <CardTitle className="text-lg">{dosen.nama}</CardTitle>
-                            <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300">
-                              <BookOpen className="h-3 w-3 mr-1" />
-                              {dosen.bidang_keahlian}
-                            </Badge>
-                          </div>
-                          <CardDescription className="flex items-center">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {dosen.email}
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-sm sm:text-lg mb-1">{dosen.nama}</CardTitle>
+                          <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300 text-[9px] sm:text-xs mb-1.5 sm:hidden">
+                            <BookOpen className="h-2.5 w-2.5 mr-0.5" />
+                            {dosen.bidang_keahlian}
+                          </Badge>
+                          <CardDescription className="flex items-center text-[11px] sm:text-sm">
+                            <Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{dosen.email}</span>
                           </CardDescription>
                         </div>
                       </div>
@@ -307,16 +305,16 @@ const PilihPembimbing = () => {
                         <Button
                           onClick={() => handleRequestClick(dosen)}
                           disabled={isPendingToDosen(dosen.id)}
-                          className="bg-cyan-600 hover:bg-cyan-700"
+                          className="bg-cyan-600 hover:bg-cyan-700 w-full sm:w-auto h-8 sm:h-10 text-xs sm:text-sm"
                         >
                           {isPendingToDosen(dosen.id) ? (
                             <>
-                              <Clock className="h-4 w-4 mr-2" />
+                              <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                               Menunggu
                             </>
                           ) : (
                             <>
-                              <Send className="h-4 w-4 mr-2" />
+                              <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                               Kirim Request
                             </>
                           )}
@@ -324,29 +322,29 @@ const PilihPembimbing = () => {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <CardContent className="pt-0">
+                    <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
                       <div className="flex items-start text-gray-600">
-                        <BookOpen className="h-4 w-4 mr-2 text-cyan-600 mt-0.5" />
+                        <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-cyan-600 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">Bidang Keahlian</p>
-                          <p>{dosen.bidang_keahlian || '-'}</p>
+                          <p className="text-[11px] sm:text-sm">{dosen.bidang_keahlian || '-'}</p>
                         </div>
                       </div>
                       
                       <div className="flex items-start text-gray-600">
-                        <User className="h-4 w-4 mr-2 text-cyan-600 mt-0.5" />
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-cyan-600 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">NIP</p>
-                          <p>{dosen.nip || '-'}</p>
+                          <p className="text-[11px] sm:text-sm">{dosen.nip || '-'}</p>
                         </div>
                       </div>
                       
                       <div className="flex items-start text-gray-600">
-                        <Users className="h-4 w-4 mr-2 text-cyan-600 mt-0.5" />
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-cyan-600 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">Mahasiswa Bimbingan</p>
-                          <p>{dosen.jumlah_bimbingan || 0} mahasiswa</p>
+                          <p className="text-[11px] sm:text-sm">{dosen.jumlah_bimbingan || 0} mahasiswa</p>
                         </div>
                       </div>
                     </div>
@@ -358,26 +356,26 @@ const PilihPembimbing = () => {
 
           {/* Status Request Saya */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">
               Status Request Saya
             </h2>
             
             {myRequests.length === 0 ? (
               <Card>
-                <CardContent className="py-8 text-center text-gray-500">
-                  <Send className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                  <p>Belum ada request yang dikirim</p>
+                <CardContent className="py-6 sm:py-8 text-center text-gray-500">
+                  <Send className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-3 text-gray-400" />
+                  <p className="text-xs sm:text-sm">Belum ada request yang dikirim</p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {myRequests.map((request) => (
                   <Card key={request.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-sm">{request.dosen_nama}</CardTitle>
-                          <CardDescription className="text-xs mt-1">
+                    <CardHeader className="pb-2 sm:pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-xs sm:text-sm truncate">{request.dosen_nama}</CardTitle>
+                          <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">
                             {new Date(request.created_at).toLocaleDateString('id-ID')}
                           </CardDescription>
                         </div>
@@ -386,16 +384,16 @@ const PilihPembimbing = () => {
                     </CardHeader>
                     <CardContent className="pt-0">
                       {request.pesan_mahasiswa && (
-                        <div className="text-xs text-gray-600 mb-2">
+                        <div className="text-[10px] sm:text-xs text-gray-600 mb-1.5 sm:mb-2">
                           <p className="font-medium">Pesan Anda:</p>
-                          <p className="italic">&quot;{request.pesan_mahasiswa}&quot;</p>
+                          <p className="italic line-clamp-2">&quot;{request.pesan_mahasiswa}&quot;</p>
                         </div>
                       )}
                       
                       {request.pesan_dosen && (
-                        <div className="text-xs text-gray-600 mb-2 p-2 bg-gray-50 rounded">
+                        <div className="text-[10px] sm:text-xs text-gray-600 mb-1.5 sm:mb-2 p-1.5 sm:p-2 bg-gray-50 rounded">
                           <p className="font-medium">Respon Dosen:</p>
-                          <p className="italic">&quot;{request.pesan_dosen}&quot;</p>
+                          <p className="italic line-clamp-2">&quot;{request.pesan_dosen}&quot;</p>
                         </div>
                       )}
                       
@@ -403,10 +401,10 @@ const PilihPembimbing = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full mt-2 text-red-600 hover:bg-red-50"
+                          className="w-full mt-1.5 sm:mt-2 text-red-600 hover:bg-red-50 h-7 sm:h-9 text-[10px] sm:text-xs"
                           onClick={() => handleCancelRequest(request.id)}
                         >
-                          <XCircle className="h-3 w-3 mr-1" />
+                          <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                           Batalkan Request
                         </Button>
                       )}

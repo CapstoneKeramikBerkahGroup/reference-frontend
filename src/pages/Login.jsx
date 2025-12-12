@@ -117,51 +117,51 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo & Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-4">
           {/* University Logos */}
-          <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center justify-center gap-3 mb-3">
             <img 
               src="/images/logo fakultas rekayasa industri.webp" 
               alt="Fakultas Rekayasa Industri" 
-              className="h-20 w-auto object-contain drop-shadow-lg"
+              className="h-12 sm:h-14 w-auto object-contain drop-shadow-lg"
             />
             <img 
               src="/images/logo sistem informasi.png" 
               alt="Sistem Informasi" 
-              className="h-20 w-auto object-contain drop-shadow-lg"
+              className="h-12 sm:h-14 w-auto object-contain drop-shadow-lg"
             />
           </div>
           
-          <h1 className="text-4xl font-serif font-bold text-foreground mb-2">Refero</h1>
-          <p className="text-muted-foreground">{t('auth.aiResearchCompanion')}</p>
-          <p className="text-sm text-muted-foreground mt-1">{t('auth.telkomUniversity')}</p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground mb-1">Refero</h1>
+          <p className="text-sm text-muted-foreground">{t('auth.aiResearchCompanion')}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t('auth.telkomUniversity')}</p>
         </div>
 
         <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-serif">{t('auth.welcomeBack')}</CardTitle>
-            <CardDescription>{t('auth.chooseRole')}</CardDescription>
+          <CardHeader className="space-y-1 text-center pb-4">
+            <CardTitle className="text-xl font-serif">{t('auth.welcomeBack')}</CardTitle>
+            <CardDescription className="text-sm">{t('auth.chooseRole')}</CardDescription>
           </CardHeader>
           
-          <CardContent>
+          <CardContent className="pt-0">
             {/* Alerts */}
             {success && (
-              <Alert className="mb-6 border-green-200 bg-green-50 text-green-800">
+              <Alert className="mb-3 border-green-200 bg-green-50 text-green-800">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertDescription>{success}</AlertDescription>
+                <AlertDescription className="text-sm">{success}</AlertDescription>
               </Alert>
             )}
 
             {error && (
-              <Alert variant="destructive" className="mb-6">
+              <Alert variant="destructive" className="mb-3">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
             )}
 
             {/* Role Selection Tabs */}
             <Tabs value={role} onValueChange={setRole} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 h-12">
+              <TabsList className="grid w-full grid-cols-2 mb-3 h-10">
                 <TabsTrigger value="mahasiswa" className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                   <GraduationCap className="w-4 h-4" />
                   <span className="font-medium">{t('auth.student')}</span>
@@ -173,8 +173,8 @@ const Login = () => {
               </TabsList>
 
               {/* Info Text */}
-              <div className="mb-4 text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="mb-3 text-center">
+                <p className="text-xs text-muted-foreground">
                   {role === 'mahasiswa' ? (
                     <>👨‍🎓 {t('auth.loggingInAs')} <span className="font-semibold text-blue-600">{t('auth.student')}</span></>
                   ) : (
@@ -184,10 +184,10 @@ const Login = () => {
               </div>
 
               {/* Login Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <TabsContent value="mahasiswa" className="mt-0 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">{t('auth.studentEmail')}</Label>
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <TabsContent value="mahasiswa" className="mt-0 space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-sm">{t('auth.studentEmail')}</Label>
                     <Input
                       id="email"
                       name="email"
@@ -197,13 +197,13 @@ const Login = () => {
                       onChange={handleChange}
                       required
                       autoFocus={role === 'mahasiswa'}
-                      className="h-11"
+                      className="h-9"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">{t('auth.password')}</Label>
+                      <Label htmlFor="password" className="text-sm">{t('auth.password')}</Label>
                       <Link 
                         to="/forgot-password" 
                         className="text-xs text-muted-foreground hover:text-primary transition-colors"
@@ -219,12 +219,12 @@ const Login = () => {
                       value={formData.password}
                       onChange={handleChange}
                       required
-                      className="h-11"
+                      className="h-9"
                     />
                   </div>
                 </TabsContent>
 
-                <TabsContent value="dosen" className="mt-0 space-y-4">
+                <TabsContent value="dosen" className="mt-0 space-y-3">
                   <div className="space-y-2">
                     <Label htmlFor="email-dosen">{t('auth.lecturerEmail')}</Label>
                     <Input
@@ -264,13 +264,13 @@ const Login = () => {
                 </TabsContent>
 
                 {/* CAPTCHA Component - Shared for both roles */}
-                <div className="pt-2">
+                <div className="pt-1">
                   <CaptchaInput onCaptchaChange={handleCaptchaChange} />
                 </div>
 
                 <Button 
                   type="submit" 
-                  className="w-full h-11 text-base font-medium mt-6"
+                  className="w-full h-9 text-sm font-medium mt-3"
                   disabled={loading}
                 >
                   {loading ? (
@@ -286,8 +286,8 @@ const Login = () => {
             </Tabs>
 
             {/* Register Link */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
+            <div className="mt-4 text-center">
+              <p className="text-xs text-muted-foreground">
                 {t('auth.dontHaveAccount')}{' '}
                 <Link to="/register" className="text-primary hover:text-primary/80 font-semibold hover:underline">
                   {t('auth.signUp')}
@@ -297,7 +297,7 @@ const Login = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground/60 mt-8">
+        <p className="text-center text-xs text-muted-foreground/60 mt-4">
           © 2025 Refero. Telkom University Capstone Project. Keramik Berkah Group.
         </p>
       </div>

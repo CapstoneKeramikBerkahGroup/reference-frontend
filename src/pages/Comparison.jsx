@@ -91,29 +91,29 @@ const Comparison = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background pb-20">
       
       {/* --- Header (Sama seperti Dashboard) --- */}
-      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50 h-16">
-        <div className="container mx-auto px-4 lg:px-8 h-full flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="gap-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50 h-14 sm:h-16">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-8 h-full flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back to</span> Dashboard
           </Button>
-          <div className="flex items-center gap-2 font-serif font-semibold text-lg">
-            <Scale className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2 font-serif font-semibold text-base sm:text-lg">
+            <Scale className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             Gap Analysis
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 lg:px-8 py-8 max-w-6xl">
+      <main className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-6xl">
         
         {/* --- 1. Selection Section --- */}
-        <div className="text-center mb-8 space-y-2">
-          <h1 className="text-3xl font-serif font-bold">Compare & Find Research Gaps</h1>
-          <p className="text-muted-foreground">Select two papers to analyze their limitations, future works, and find potential research opportunities.</p>
+        <div className="text-center mb-6 sm:mb-8 space-y-2">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-serif font-bold px-2">Compare & Find Research Gaps</h1>
+          <p className="text-sm sm:text-base text-muted-foreground px-4">Select two papers to analyze their limitations, future works, and find potential research opportunities.</p>
         </div>
 
-        <Card className="border-border/50 shadow-md mb-8 bg-white/50 backdrop-blur-sm">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+        <Card className="border-border/50 shadow-md mb-6 sm:mb-8 bg-white/50 backdrop-blur-sm">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8">
               
               {/* Doc 1 Selector */}
               <div className="flex-1 w-full space-y-2">

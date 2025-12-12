@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { 
   Search, Download, Trash2, Eye, FileText, Clock, 
-  CheckCircle2, Filter, SortAsc, SortDesc, Plus, Upload 
+  CheckCircle2, Filter, SortAsc, SortDesc, Plus, Upload, Sparkles 
 } from 'lucide-react';
-import { documentsAPI } from '../services/api';
+import { documentsAPI, integrationAPI } from '../services/api';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -26,6 +26,7 @@ const Documents = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // desc = newest first
   const [filterStatus, setFilterStatus] = useState('all'); // all, completed, processing, pending
+  const [filterSource, setFilterSource] = useState('all'); // all, manual, mendeley, zotero
   
   // Upload state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -33,13 +34,18 @@ const Documents = () => {
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploading, setUploading] = useState(false);
 
+  // Zotero references state
+  const [zoteroReferences, setZoteroReferences] = useState([]);
+  const [analyzingIds, setAnalyzingIds] = useState([]);
+
   useEffect(() => {
     loadDocuments();
+    loadZoteroReferences();
   }, []);
 
   useEffect(() => {
     filterAndSortDocuments();
-  }, [searchQuery, documents, sortOrder, filterStatus]);
+  }, [searchQuery, documents, sortOrder, filterStatus, filterSource]);
 
   const loadDocuments = async () => {
     try {
@@ -51,6 +57,36 @@ const Documents = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadZoteroReferences = async () => {
+    try {
+      const response = await integrationAPI.getReferences();
+      setZoteroReferences(response.data || []);
+    } catch (err) {
+      // Silently fail - user might not have Zotero configured
+      console.log('Zotero not configured or no references');
+    }
+  };
+
+  const handleAnalyzeZotero = async (refId) => {
+    setAnalyzingIds(prev => [...prev, refId]);
+    
+    try {
+        await integrationAPI.analyzeZotero(refId);
+        toast.success(
+          t('messages.success.analyzed') || 'Document downloaded! Processing...'
+        );
+        
+        // Reload documents and references
+        await loadDocuments();
+        await loadZoteroReferences();
+        setAnalyzingIds(prev => prev.filter(id => id !== refId));
+        
+    } catch (err) {
+        toast.error(err.response?.data?.detail || 'Failed to process Zotero item. PDF might be missing.');
+        setAnalyzingIds(prev => prev.filter(id => id !== refId));
     }
   };
 
@@ -70,6 +106,20 @@ const Documents = () => {
       filtered = filtered.filter((doc) => doc.status_analisis === filterStatus);
     }
 
+    // Filter by source
+    if (filterSource !== 'all') {
+      if (filterSource === 'mendeley') {
+        filtered = filtered.filter((doc) => doc.nama_file && doc.nama_file.startsWith('mendeley_'));
+      } else if (filterSource === 'zotero') {
+        filtered = filtered.filter((doc) => doc.nama_file && doc.nama_file.startsWith('zotero_'));
+      } else if (filterSource === 'manual') {
+        filtered = filtered.filter((doc) => {
+          const fileName = doc.nama_file || '';
+          return !fileName.startsWith('mendeley_') && !fileName.startsWith('zotero_');
+        });
+      }
+    }
+
     // Sort by date
     filtered.sort((a, b) => {
       const dateA = new Date(a.tanggal_unggah);
@@ -78,6 +128,22 @@ const Documents = () => {
     });
 
     setFilteredDocuments(filtered);
+  };
+
+  // Helper functions to count documents by source
+  const getManualCount = () => {
+    return documents.filter(doc => {
+      const fileName = doc.nama_file || '';
+      return !fileName.startsWith('mendeley_') && !fileName.startsWith('zotero_');
+    }).length;
+  };
+
+  const getMendeleyCount = () => {
+    return documents.filter(doc => doc.nama_file && doc.nama_file.startsWith('mendeley_')).length;
+  };
+
+  const getZoteroCount = () => {
+    return documents.filter(doc => doc.nama_file && doc.nama_file.startsWith('zotero_')).length;
   };
 
   const handleDownload = async (id, filename) => {
@@ -206,16 +272,16 @@ const Documents = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <main className="container mx-auto px-4 lg:px-8 py-8">
+      <main className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-white" />
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-serif font-bold text-gray-900">{t('documents.title')}</h1>
-              <p className="text-gray-600">
+              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900">{t('documents.title')}</h1>
+              <p className="text-sm sm:text-base text-gray-600">
                 {filteredDocuments.length} {t('documents.documentsFound')}
               </p>
             </div>
@@ -317,32 +383,40 @@ const Documents = () => {
           </div>
 
           {/* Filter & Sort Bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Status Filter */}
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-3">
+            {/* Source Filter */}
+            <div className="flex gap-2 flex-wrap">
               <Button
-                variant={filterStatus === 'all' ? 'default' : 'outline'}
+                variant={filterSource === 'all' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFilterStatus('all')}
-                className={filterStatus === 'all' ? 'bg-cyan-600 hover:bg-cyan-700' : 'border-cyan-300 text-cyan-700 hover:bg-cyan-50'}
+                onClick={() => setFilterSource('all')}
+                className={`text-xs sm:text-sm ${filterSource === 'all' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
               >
-                {t('documents.all')} ({documents.length})
+                {t('documents.allSources')} ({documents.length})
               </Button>
               <Button
-                variant={filterStatus === 'completed' ? 'default' : 'outline'}
+                variant={filterSource === 'manual' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFilterStatus('completed')}
-                className={filterStatus === 'completed' ? 'bg-green-600 hover:bg-green-700' : 'border-green-300 text-green-700 hover:bg-green-50'}
+                onClick={() => setFilterSource('manual')}
+                className={filterSource === 'manual' ? 'bg-cyan-600 hover:bg-cyan-700' : 'border-cyan-300 text-cyan-700 hover:bg-cyan-50'}
               >
-                {t('documentDetail.status.completed')} ({documents.filter(d => d.status_analisis === 'completed').length})
+                {t('documents.myUploads')} ({getManualCount()})
               </Button>
               <Button
-                variant={filterStatus === 'processing' ? 'default' : 'outline'}
+                variant={filterSource === 'mendeley' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFilterStatus('processing')}
-                className={filterStatus === 'processing' ? 'bg-cyan-600 hover:bg-cyan-700' : 'border-cyan-300 text-cyan-700 hover:bg-cyan-50'}
+                onClick={() => setFilterSource('mendeley')}
+                className={filterSource === 'mendeley' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
               >
-                {t('documentDetail.status.processing')} ({documents.filter(d => d.status_analisis === 'processing').length})
+                {t('documents.mendeley')} ({getMendeleyCount()})
+              </Button>
+              <Button
+                variant={filterSource === 'zotero' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterSource('zotero')}
+                className={filterSource === 'zotero' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-300 text-blue-700 hover:bg-blue-50'}
+              >
+                {t('documents.zotero')} ({getZoteroCount()})
               </Button>
             </div>
 
@@ -368,7 +442,7 @@ const Documents = () => {
           </div>
         </div>
 
-        {/* Document List */}
+        {/* Document List - Analyzed Papers (Show First) */}
         {filteredDocuments.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -385,7 +459,7 @@ const Documents = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 mb-8">
             {filteredDocuments.map((doc) => (
               <Card 
                 key={doc.id} 
@@ -453,6 +527,84 @@ const Documents = () => {
               </Card>
             ))}
           </div>
+        )}
+
+        {/* Zotero References Section - Only show when Zotero filter is active */}
+        {filterSource === 'zotero' && zoteroReferences.length > 0 && (
+          <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-blue-600" />
+                <CardTitle className="text-lg">
+                  {t('language') === 'id' ? 'Siap untuk Dianalisis' : 'Ready to Analyze'}
+                </CardTitle>
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700">{zoteroReferences.length}</Badge>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                {t('language') === 'id' 
+                  ? 'Klik "Analisis AI" untuk download dan analyze paper ke sistem' 
+                  : 'Click "AI Analyze" to download and analyze paper into system'}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {zoteroReferences.map((ref) => (
+                  <Card 
+                    key={ref.id} 
+                    className="border-blue-200 bg-white shadow-sm hover:shadow-md transition-all group"
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">Zotero</Badge>
+                      </div>
+                      <CardTitle className="text-base font-serif line-clamp-2 group-hover:text-blue-600 transition-colors" title={ref.title}>
+                        {ref.title}
+                      </CardTitle>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-2 pb-3">
+                      <div className="text-sm space-y-1">
+                        <p className="line-clamp-1 font-medium text-gray-700">{ref.authors}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Clock className="w-3 h-3" /> 
+                          {t('language') === 'id' ? 'Tahun' : 'Year'}: {ref.year}
+                        </div>
+                      </div>
+                      {ref.abstract && (
+                        <p className="text-xs text-gray-500 line-clamp-2 italic bg-gray-50 p-2 rounded">
+                          "{ref.abstract}"
+                        </p>
+                      )}
+                    </CardContent>
+                    
+                    <CardFooter className="flex gap-2 pt-2">
+                      <Button 
+                        size="sm" 
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => handleAnalyzeZotero(ref.id)}
+                        disabled={analyzingIds.includes(ref.id)}
+                      >
+                        {analyzingIds.includes(ref.id) ? (
+                          <>
+                            <span className="animate-spin mr-2">⌛</span> 
+                            {t('language') === 'id' ? 'Memproses...' : 'Processing...'}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" /> 
+                            {t('language') === 'id' ? 'Analisis AI' : 'AI Analyze'}
+                          </>
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </main>
     </div>

@@ -126,54 +126,54 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex items-center justify-center p-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex items-center justify-center p-4 py-8">
       <div className="w-full max-w-xl">
         {/* Logo & Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-4">
           {/* University Logos */}
-          <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center justify-center gap-3 mb-3">
             <img 
               src="/images/logo fakultas rekayasa industri.webp" 
               alt="Fakultas Rekayasa Industri" 
-              className="h-20 w-auto object-contain drop-shadow-lg"
+              className="h-12 sm:h-14 w-auto object-contain drop-shadow-lg"
             />
             <img 
               src="/images/logo sistem informasi.png" 
               alt="Sistem Informasi" 
-              className="h-20 w-auto object-contain drop-shadow-lg"
+              className="h-12 sm:h-14 w-auto object-contain drop-shadow-lg"
             />
           </div>
           
-          <h1 className="text-4xl font-serif font-bold text-foreground mb-2">Refero</h1>
-          <p className="text-muted-foreground">Your AI Research Companion</p>
-          <p className="text-sm text-muted-foreground mt-1">Telkom University - S1 Sistem Informasi</p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground mb-1">Refero</h1>
+          <p className="text-sm text-muted-foreground">Your AI Research Companion</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Telkom University - S1 Sistem Informasi</p>
         </div>
 
         <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-serif">Create Account</CardTitle>
-            <CardDescription>Choose your role to get started</CardDescription>
+          <CardHeader className="space-y-1 text-center pb-4">
+            <CardTitle className="text-xl font-serif">Create Account</CardTitle>
+            <CardDescription className="text-sm">Choose your role to get started</CardDescription>
           </CardHeader>
           
-          <CardContent>
+          <CardContent className="pt-0">
             {/* Alerts */}
             {success && (
-              <Alert className="mb-6 border-green-200 bg-green-50 text-green-800">
+              <Alert className="mb-3 border-green-200 bg-green-50 text-green-800">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertDescription>{success}</AlertDescription>
+                <AlertDescription className="text-sm">{success}</AlertDescription>
               </Alert>
             )}
 
             {error && (
-              <Alert variant="destructive" className="mb-6">
+              <Alert variant="destructive" className="mb-3">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
             )}
 
             {/* Role Selection Tabs */}
             <Tabs value={role} onValueChange={setRole} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-4 h-10">
                 <TabsTrigger value="mahasiswa" className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4" />
                   Student
@@ -184,11 +184,11 @@ const Register = () => {
                 </TabsTrigger>
               </TabsList>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Common Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nama">Full Name</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nama" className="text-sm">Full Name</Label>
                     <Input
                       id="nama"
                       name="nama"
@@ -196,10 +196,11 @@ const Register = () => {
                       value={formData.nama}
                       onChange={handleChange}
                       required
+                      className="h-9"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-sm">Email Address</Label>
                     <Input
                       id="email"
                       name="email"
@@ -208,14 +209,15 @@ const Register = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
+                      className="h-9"
                     />
                   </div>
                 </div>
 
                 {/* Role Specific Fields */}
-                <TabsContent value="mahasiswa" className="space-y-4 mt-0">
-                  <div className="space-y-2">
-                    <Label htmlFor="nim">Student ID (NIM)</Label>
+                <TabsContent value="mahasiswa" className="space-y-3 mt-0">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nim" className="text-sm">Student ID (NIM)</Label>
                     <Input
                       id="nim"
                       name="nim"
@@ -223,11 +225,12 @@ const Register = () => {
                       value={formData.nim}
                       onChange={handleChange}
                       required={role === 'mahasiswa'}
+                      className="h-9"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="program_studi">Study Program</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="program_studi" className="text-sm">Study Program</Label>
                       <Input
                         id="program_studi"
                         name="program_studi"
@@ -235,10 +238,11 @@ const Register = () => {
                         value={formData.program_studi}
                         onChange={handleChange}
                         required={role === 'mahasiswa'}
+                        className="h-9"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="angkatan">Year (Angkatan)</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="angkatan" className="text-sm">Year (Angkatan)</Label>
                       <Input
                         id="angkatan"
                         name="angkatan"
@@ -247,11 +251,12 @@ const Register = () => {
                         value={formData.angkatan}
                         onChange={handleChange}
                         required={role === 'mahasiswa'}
+                        className="h-9"
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bidang_keahlian">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bidang_keahlian" className="text-sm">
                       Specialization <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -259,7 +264,7 @@ const Register = () => {
                       onValueChange={(value) => setFormData({ ...formData, bidang_keahlian: value })}
                       required
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full h-9">
                         <SelectValue placeholder="Select your specialization" />
                       </SelectTrigger>
                       <SelectContent>
@@ -276,9 +281,9 @@ const Register = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="dosen" className="space-y-4 mt-0">
-                  <div className="space-y-2">
-                    <Label htmlFor="nip">Lecturer ID (NIP)</Label>
+                <TabsContent value="dosen" className="space-y-3 mt-0">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nip" className="text-sm">Lecturer ID (NIP)</Label>
                     <Input
                       id="nip"
                       name="nip"
@@ -286,11 +291,12 @@ const Register = () => {
                       value={formData.nip}
                       onChange={handleChange}
                       required={role === 'dosen'}
+                      className="h-9"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="jabatan">Position</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="jabatan" className="text-sm">Position</Label>
                       <Input
                         id="jabatan"
                         name="jabatan"
@@ -298,10 +304,11 @@ const Register = () => {
                         value={formData.jabatan}
                         onChange={handleChange}
                         required={role === 'dosen'}
+                        className="h-9"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bidang_keahlian">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bidang_keahlian" className="text-sm">
                         Specialization <span className="text-red-500">*</span>
                       </Label>
                       <Select
@@ -309,7 +316,7 @@ const Register = () => {
                         onValueChange={(value) => setFormData({ ...formData, bidang_keahlian: value })}
                         required
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full h-9">
                           <SelectValue placeholder="Select your specialization" />
                         </SelectTrigger>
                         <SelectContent>
@@ -328,9 +335,9 @@ const Register = () => {
                 </TabsContent>
 
                 {/* Password Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password" className="text-sm">Password</Label>
                     <Input
                       id="password"
                       name="password"
@@ -339,10 +346,11 @@ const Register = () => {
                       value={formData.password}
                       onChange={handleChange}
                       required
+                      className="h-9"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirmPassword" className="text-sm">Confirm Password</Label>
                     <Input
                       id="confirmPassword"
                       name="confirmPassword"
@@ -351,13 +359,14 @@ const Register = () => {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
+                      className="h-9"
                     />
                   </div>
                 </div>
 
                 <Button 
                   type="submit" 
-                  className="w-full h-11 text-base font-medium mt-6"
+                  className="w-full h-9 text-sm font-medium mt-3"
                   disabled={loading}
                 >
                   {loading ? (
@@ -372,8 +381,8 @@ const Register = () => {
               </form>
             </Tabs>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
+            <div className="mt-4 text-center">
+              <p className="text-xs text-muted-foreground">
                 Already have an account?{' '}
                 <Link to="/login" className="text-primary hover:text-primary/80 font-semibold hover:underline">
                   Sign in here
@@ -383,7 +392,7 @@ const Register = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground/60 mt-8">
+        <p className="text-center text-xs text-muted-foreground/60 mt-4">
           © 2025 Refero. Telkom University Capstone Project. Keramik Berkah Group.
         </p>
       </div>

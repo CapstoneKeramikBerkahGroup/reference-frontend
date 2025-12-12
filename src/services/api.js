@@ -27,10 +27,17 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Check if this is an integration endpoint (Mendeley/Zotero)
+      const url = error.config?.url || '';
+      const isIntegrationEndpoint = url.includes('/mendeley/') || url.includes('/integration/');
+      
+      // Don't auto logout for integration endpoints - let component handle it
+      if (!isIntegrationEndpoint) {
+        // Unauthorized - clear token and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -130,6 +137,9 @@ export const integrationAPI = {
   syncZotero: () => api.post('/integration/zotero/sync'),
   getReferences: () => api.get('/integration/references'),
   analyzeZotero: (refId) => api.post(`/integration/zotero/analyze/${refId}`),
+  getConfig: () => api.get('/integration/zotero/config'),
+  saveConfig: (data) => api.post('/integration/zotero/config', data),
+  disconnect: () => api.post('/integration/zotero/disconnect'),
 };
 
 // ============= DOSEN API =============

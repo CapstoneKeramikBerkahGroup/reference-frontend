@@ -10,31 +10,41 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-// Gunakan sonner untuk notifikasi modern
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
 // --- 2. Import Icons & API ---
 import { 
   ArrowLeft, Download, Trash2, Brain, FileText, 
   Tag, Plus, Clock, CheckCircle2, AlertCircle,
-  Sparkles, BookOpen, X, Upload, HelpCircle
+  Sparkles, BookOpen, X, Languages, Lightbulb, PenTool
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { documentsAPI, nlpAPI, tagsAPI, mendeleyAPI } from '../services/api';
+import { documentsAPI, nlpAPI, tagsAPI } from '../services/api';
 
 const DocumentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // --- 3. State Management (Logika Lama Anda) ---
+  // --- 3. State Management ---
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStep, setProcessingStep] = useState('');
   const [error, setError] = useState('');
+
+  // State untuk Fitur Outline (Kerangka)
+  const [outline, setOutline] = useState(null);
+  const [loadingOutline, setLoadingOutline] = useState(false);
   
   // Tag Management
   const [allTags, setAllTags] = useState([]);
@@ -68,7 +78,7 @@ const DocumentDetail = () => {
     }
   };
 
-  // --- 5. Action Handlers (Logika Canggih Anda) ---
+  // --- 5. Action Handlers ---
 
   const handleProcessDocument = async () => {
     setProcessing(true);
@@ -79,11 +89,9 @@ const DocumentDetail = () => {
     let pollInterval = null;
     
     try {
-      // Start background processing
       await nlpAPI.processDocument(id);
       toast.info('Analysis started...');
       
-      // Poll for status
       pollInterval = setInterval(async () => {
         try {
           const statusResponse = await nlpAPI.getStatus(id);
@@ -96,7 +104,7 @@ const DocumentDetail = () => {
           
           if (status === 'completed' || status === 'selesai') {
             if (pollInterval) clearInterval(pollInterval);
-            await loadDocument(); // Reload data
+            await loadDocument(); 
             setProcessing(false);
             setProcessingProgress(100);
             toast.success('Document analysis completed!');
@@ -148,20 +156,13 @@ const DocumentDetail = () => {
     }
   };
 
-  // Tag Logic (Simplified for UI)
   const handleAddTag = async () => {
     if (!newTagName.trim()) return;
     try {
-      // Logic: Cari tag existing atau buat baru (tergantung backend Anda)
-      // Disini kita asumsikan backend handle by ID atau Nama
-      // Simple implementation:
       let tagId = allTags.find(t => t.nama_tag.toLowerCase() === newTagName.toLowerCase())?.id;
       
-      // Jika tag belum ada, harusnya ada API create tag dulu, 
-      // tapi untuk simplifikasi kita coba add langsung jika backend support nama
-      // Atau tampilkan error jika tag tidak ditemukan
       if (!tagId) {
-          toast.error("Tag not found. Please create it in settings first (or implement create logic).");
+          toast.error("Tag not found. Please create it in settings first.");
           return;
       }
 
@@ -185,9 +186,143 @@ const DocumentDetail = () => {
     }
   };
 
+  // Handler untuk Generate Outline (Kerangka Skripsi)
+  const handleGenerateOutline = async () => {
+    if (!document?.judul) {
+      toast.error("Judul dokumen tidak ditemukan.");
+      return;
+    }
 
+    setLoadingOutline(true);
+    try {
+      const response = await nlpAPI.generateOutline(document.judul);
+      setOutline(response.data.data);
+      toast.success("Ide kerangka berhasil dibuat!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal membuat kerangka. Pastikan koneksi aman.");
+    } finally {
+      setLoadingOutline(false);
+    }
+  };
 
-  // --- 6. Render UI Modern ---
+  // --- 6. Helper Functions for Summary Display ---
+
+  const parseSummary = (text) => {
+    if (!text) return { isDual: false, single: '' };
+    const dualMatch = text.match(/\[English\]([\s\S]*?)\[Indonesia\]([\s\S]*)/i);
+    if (dualMatch) {
+      return {
+        isDual: true,
+        english: dualMatch[1].trim(),
+        indonesian: dualMatch[2].trim()
+      };
+    }
+    return { isDual: false, single: text };
+  };
+
+  /**
+   * RENDERER BARU: Struktur Header + Bullet Points Rapi
+   */
+  const renderStructuredContent = (text) => {
+    if (!text) return null;
+    
+    const lines = text.split('\n');
+    const contentElements = [];
+    let currentList = [];
+    let keyCounter = 0;
+
+    const flushList = () => {
+      if (currentList.length > 0) {
+        contentElements.push(
+          <ul key={`list-${keyCounter++}`} className="list-none space-y-3 mb-6">
+            {currentList}
+          </ul>
+        );
+        currentList = [];
+      }
+    };
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      // 1. DETEKSI HEADER (### JUDUL)
+      if (trimmed.startsWith('###')) {
+        flushList();
+        
+        const titleText = trimmed.replace(/^###\s*/, '').replace(/\*/g, '');
+        
+        let icon = <Lightbulb className="w-5 h-5" />;
+        let colorClass = "text-gray-800";
+        let bgClass = "bg-gray-100";
+        let borderClass = "border-gray-200";
+
+        const lowerTitle = titleText.toLowerCase();
+        
+        if (lowerTitle.includes('context') || lowerTitle.includes('konteks') || lowerTitle.includes('masalah')) {
+            icon = <BookOpen className="w-5 h-5 text-blue-600" />;
+            colorClass = "text-blue-900";
+            bgClass = "bg-blue-50";
+            borderClass = "border-blue-100";
+        } else if (lowerTitle.includes('technical') || lowerTitle.includes('teknis') || lowerTitle.includes('implementasi')) {
+            icon = <PenTool className="w-5 h-5 text-purple-600" />;
+            colorClass = "text-purple-900";
+            bgClass = "bg-purple-50";
+            borderClass = "border-purple-100";
+        } else if (lowerTitle.includes('finding') || lowerTitle.includes('temuan') || lowerTitle.includes('insight')) {
+            icon = <Sparkles className="w-5 h-5 text-emerald-600" />;
+            colorClass = "text-emerald-900";
+            bgClass = "bg-emerald-50";
+            borderClass = "border-emerald-100";
+        }
+
+        contentElements.push(
+          <div key={`header-${index}`} className={`flex items-center gap-3 ${bgClass} border ${borderClass} p-3 rounded-lg mb-3 mt-1`}>
+            {icon}
+            <h3 className={`font-bold text-sm md:text-base uppercase tracking-wide ${colorClass}`}>
+              {titleText}
+            </h3>
+          </div>
+        );
+      }
+      
+      // 2. DETEKSI BULLET POINT (*, -, •)
+      else if (trimmed.startsWith('*') || trimmed.startsWith('-') || trimmed.startsWith('•')) {
+        const itemText = trimmed.replace(/^[*•-]\s*/, '');
+        const formattedText = itemText.split(/(\[.*?\]|\*\*.*?\*\*)/g).map((part, i) => {
+            if (part.startsWith('[') || part.startsWith('**')) {
+                return <span key={i} className="font-semibold text-gray-900">{part.replace(/[*\[\]]/g, '')}</span>;
+            }
+            return part;
+        });
+
+        currentList.push(
+          <li key={`item-${index}`} className="flex gap-3 text-gray-700 text-sm leading-relaxed pl-1">
+            <span className="text-gray-400 mt-1 min-w-[10px]">•</span>
+            <span>{formattedText}</span>
+          </li>
+        );
+      }
+      
+      // 3. TEKS BIASA
+      else {
+        flushList();
+        contentElements.push(
+            <p key={`p-${index}`} className="text-gray-600 mb-2 text-sm leading-relaxed">
+                {trimmed}
+            </p>
+        );
+      }
+    });
+
+    flushList();
+    return contentElements;
+  };
+
+  // --- 7. Render UI ---
+
+  const summaryData = parseSummary(document?.ringkasan);
 
   if (loading) {
     return (
@@ -240,23 +375,18 @@ const DocumentDetail = () => {
 
       <main className="container mx-auto px-4 lg:px-8 py-8 max-w-6xl">
         
-        {/* 1. Document Info Card */}
+        {/* Document Info Card */}
         <Card className="mb-8 border-cyan-200 shadow-sm bg-white">
           <CardHeader className="pb-4">
             <div className="flex flex-col md:flex-row md:items-start gap-6">
-              {/* Icon */}
               <div className="w-20 h-20 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0">
                 <FileText className="w-10 h-10 text-cyan-600" />
               </div>
-              
-              {/* Title & Meta */}
               <div className="flex-1 min-w-0 space-y-2">
                 <div className="flex flex-col md:flex-row md:justify-between gap-4">
                   <CardTitle className="text-2xl md:text-3xl font-serif leading-tight text-gray-900 break-words min-w-0">
                     {document.judul}
                   </CardTitle>
-                  
-                  {/* Status Badge */}
                   <div className="flex-shrink-0">
                     {document.status_analisis === 'completed' ? (
                       <Badge className="bg-green-100 text-green-700 border-green-200 px-3 py-1">
@@ -289,84 +419,248 @@ const DocumentDetail = () => {
           </CardHeader>
         </Card>
 
-        {/* 2. AI Processing Action Area */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Left Column: Summary & Content */}
-          <div className="lg:col-span-2 space-y-8">
+          {/* Left Column: TABS (Summary & Outline) */}
+          <div className="lg:col-span-2">
             
-            {/* Alert Error if any */}
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <Tabs defaultValue="summary" className="w-full">
+              
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100 p-1 rounded-lg">
+                <TabsTrigger 
+                  value="summary" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-cyan-700 data-[state=active]:shadow-sm font-medium transition-all"
+                >
+                  <BookOpen className="w-4 h-4 mr-2"/> Ringkasan Dokumen
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="outline" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm font-medium transition-all"
+                >
+                  <Lightbulb className="w-4 h-4 mr-2"/> Inspirasi Kerangka
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Progress Bar (Processing State) */}
-            {(processing || document.status_analisis === 'processing') && (
-               <Card className="border-cyan-200 bg-cyan-50/50">
-                 <CardContent className="pt-6">
-                   <div className="flex justify-between text-sm mb-2 font-medium text-cyan-700">
-                      <span>{processingStep || 'AI is analyzing document...'}</span>
-                      <span>{processingProgress}%</span>
-                   </div>
-                   <Progress value={processingProgress} className="h-2 w-full bg-cyan-100" />
-                   <p className="text-xs text-cyan-600 mt-2">This may take a few moments depending on document length.</p>
-                 </CardContent>
-               </Card>
-            )}
+              {/* --- TAB 1: RINGKASAN --- */}
+              <TabsContent value="summary" className="space-y-8 animate-in fade-in-50 duration-300">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-            {/* Summary Section */}
-            <Card className="border-cyan-200 shadow-sm h-fit bg-white">
-              <CardHeader className="border-b border-border/40 bg-accent/5">
-                <CardTitle className="flex items-center gap-2 text-lg font-serif">
-                  <BookOpen className="w-5 h-5 text-primary" />
-                  Ringkasan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
+                {(processing || document.status_analisis === 'processing') && (
+                  <Card className="border-cyan-200 bg-cyan-50/50">
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between text-sm mb-2 font-medium text-cyan-700">
+                        <span>{processingStep || 'AI is analyzing document...'}</span>
+                        <span>{processingProgress}%</span>
+                      </div>
+                      <Progress value={processingProgress} className="h-2 w-full bg-cyan-100" />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Summary Output */}
                 {document.ringkasan ? (
-                  <div className="prose prose-sm max-w-none text-foreground/90 leading-relaxed">
-                    {document.ringkasan}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 bg-cyan-50 rounded-lg border border-dashed border-cyan-200">
-                    <Brain className="w-12 h-12 mx-auto mb-3 text-cyan-300" />
-                    <p className="text-gray-600 mb-4">Belum ada ringkasan yang dihasilkan.</p>
-                    <Button onClick={handleProcessDocument} disabled={processing} className="bg-cyan-600 hover:bg-cyan-700">
-                      <Sparkles className="w-4 h-4 mr-2" /> Buat Ringkasan dengan AI
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  <>
+                    {summaryData.isDual ? (
+                      <>
+                        <Card className="border-cyan-200 shadow-sm h-fit bg-white overflow-hidden">
+                          <CardHeader className="border-b border-border/40 bg-gradient-to-r from-blue-50 to-white pb-4">
+                            <CardTitle className="flex items-center gap-2 text-lg font-serif text-blue-900">
+                              <Languages className="w-5 h-5 text-blue-600" />
+                              Deep Dive Summary (English)
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pt-6 px-6">
+                            <div className="prose prose-sm max-w-none">
+                              {renderStructuredContent(summaryData.english)}
+                            </div>
+                          </CardContent>
+                        </Card>
 
-            {/* References List */}
-            <Card className="border-cyan-200 shadow-sm bg-white">
-              <CardHeader className="border-b border-border/40 bg-accent/5">
-                <CardTitle className="flex items-center gap-2 text-lg font-serif">
-                  <FileText className="w-5 h-5 text-primary" />
-                  Referensi yang Diekstrak
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {document.referensi && document.referensi.length > 0 ? (
-                  <ul className="space-y-4">
-                    {document.referensi.map((ref, idx) => (
-                      <li key={idx} className="text-sm text-muted-foreground flex gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors">
-                        <span className="font-mono text-xs text-primary font-bold h-6 w-6 flex items-center justify-center bg-primary/10 rounded flex-shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span>{ref.teks_referensi}</span>
-                      </li>
-                    ))}
-                  </ul>
+                        <Card className="border-emerald-200 shadow-sm h-fit bg-white overflow-hidden">
+                          <CardHeader className="border-b border-border/40 bg-gradient-to-r from-emerald-50 to-white pb-4">
+                            <CardTitle className="flex items-center gap-2 text-lg font-serif text-emerald-900">
+                              <BookOpen className="w-5 h-5 text-emerald-600" />
+                              Ringkasan Mendalam (Indonesia)
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pt-6 px-6">
+                            <div className="prose prose-sm max-w-none">
+                              {renderStructuredContent(summaryData.indonesian)}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </>
+                    ) : (
+                      <Card className="border-cyan-200 shadow-sm h-fit bg-white">
+                        <CardHeader className="border-b border-border/40 bg-accent/5">
+                          <CardTitle className="flex items-center gap-2 text-lg font-serif">
+                            <BookOpen className="w-5 h-5 text-primary" />
+                            Ringkasan
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                          <div className="prose prose-sm max-w-none">
+                            {renderStructuredContent(summaryData.single)}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
                 ) : (
-                  <p className="text-muted-foreground text-sm italic">Belum ada referensi yang diekstrak.</p>
+                  <Card className="border-dashed border-2 border-gray-200 bg-gray-50/50">
+                    <CardContent className="py-12 flex flex-col items-center text-center">
+                      <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                         <Brain className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 mb-4">Belum ada ringkasan yang dihasilkan.</p>
+                      <Button onClick={handleProcessDocument} disabled={processing} variant="outline" className="border-cyan-200 text-cyan-700 hover:bg-cyan-50">
+                        <Sparkles className="w-4 h-4 mr-2"/> Buat Ringkasan AI
+                      </Button>
+                    </CardContent>
+                  </Card>
                 )}
-              </CardContent>
-            </Card>
+
+                {/* References List */}
+                <Card className="border-cyan-200 shadow-sm bg-white">
+                  <CardHeader className="border-b border-gray-100">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-cyan-600"/> Referensi Terdeteksi
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    {document.referensi && document.referensi.length > 0 ? (
+                      <ul className="space-y-3">
+                        {document.referensi.map((ref, idx) => (
+                          <li key={idx} className="text-sm text-gray-600 flex gap-3 items-start bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <span className="font-bold text-cyan-600 bg-cyan-100 px-2 py-0.5 rounded text-xs min-w-[24px] text-center mt-0.5">
+                              {idx + 1}
+                            </span>
+                            <span className="leading-relaxed">{ref.teks_referensi}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : <p className="text-sm text-muted-foreground italic">Tidak ada referensi yang diekstrak.</p>}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* --- TAB 2: INSPIRASI KERANGKA (OUTLINE) --- */}
+              <TabsContent value="outline" className="space-y-6 animate-in fade-in-50 duration-300">
+                <Card className="border-purple-200 bg-white shadow-sm overflow-hidden">
+                  <CardHeader className="bg-purple-50/30 border-b border-purple-100 pb-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <CardTitle className="text-purple-900 flex items-center gap-2 text-lg">
+                          <PenTool className="w-5 h-5"/> Smart Thesis Outline
+                        </CardTitle>
+                        <p className="text-sm text-purple-600/80 mt-1">
+                          Rekomendasi struktur Bab 1-3 berbasis AI sesuai standar akademik.
+                        </p>
+                      </div>
+                      
+                      {outline && (
+                        <Button 
+                          onClick={handleGenerateOutline} 
+                          disabled={loadingOutline} 
+                          variant="outline"
+                          size="sm" 
+                          className="border-purple-200 text-purple-700 hover:bg-purple-50 shrink-0"
+                        >
+                          {loadingOutline ? <Sparkles className="w-4 h-4 animate-spin mr-2"/> : <Lightbulb className="w-4 h-4 mr-2"/>}
+                          Generate Ulang
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-6 min-h-[400px]">
+                    {outline ? (
+                      <Accordion type="single" collapsible className="w-full">
+                        {Object.entries(outline).map(([babTitle, subChapters], index) => (
+                          <AccordionItem key={index} value={`item-${index}`} className="border-b border-purple-100 last:border-0">
+                            <AccordionTrigger className="hover:no-underline py-4 px-2 hover:bg-purple-50/50 rounded-lg transition-colors">
+                              <span className="font-bold text-lg text-gray-800 flex items-center gap-3 text-left">
+                                <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm font-bold shadow-sm">
+                                  {index + 1}
+                                </span>
+                                {babTitle}
+                              </span>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-2 pb-6 space-y-4 px-4">
+                              {subChapters.map((item, idx) => (
+                                <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100 hover:border-purple-200 hover:shadow-sm transition-all duration-200">
+                                  <div className="flex gap-4">
+                                    <div className="mt-1.5 min-w-[4px] w-[4px] bg-purple-400 rounded-full h-auto self-stretch"></div>
+                                    <div>
+                                      <h5 className="font-bold text-purple-900 text-base mb-1.5">
+                                        {item.sub}
+                                      </h5>
+                                      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                                        {item.guide}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-16 text-center h-full">
+                        {loadingOutline ? (
+                          <div className="space-y-6 animate-pulse w-full max-w-md">
+                            <div className="w-20 h-20 bg-purple-50 rounded-full mx-auto flex items-center justify-center border border-purple-100">
+                              <Sparkles className="w-10 h-10 text-purple-400 animate-spin" />
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-xl font-semibold text-gray-900">Sedang Merancang Ide...</h3>
+                              <p className="text-gray-500">
+                                AI sedang menganalisis judul <span className="text-purple-600 font-medium">"{document.judul}"</span> untuk menyusun kerangka yang logis.
+                              </p>
+                            </div>
+                            <div className="space-y-2 pt-4">
+                              <div className="h-2 bg-purple-100 rounded w-3/4 mx-auto"></div>
+                              <div className="h-2 bg-purple-100 rounded w-1/2 mx-auto"></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-6 max-w-lg mx-auto">
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-purple-100 rounded-full blur-xl opacity-50 transform scale-150"></div>
+                              <div className="relative w-24 h-24 bg-white rounded-2xl mx-auto flex items-center justify-center border-2 border-dashed border-purple-200 shadow-sm">
+                                <BookOpen className="w-10 h-10 text-purple-500" />
+                              </div>
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-gray-900 mb-2">Butuh Inspirasi Menulis?</h3>
+                              <p className="text-gray-600 leading-relaxed">
+                                Fitur ini akan menggunakan AI untuk membuat rekomendasi struktur 
+                                <span className="font-semibold text-purple-700"> Bab 1, 2, dan 3 </span> 
+                                yang disesuaikan spesifik dengan judul skripsi Anda.
+                              </p>
+                            </div>
+                            <Button 
+                              onClick={handleGenerateOutline} 
+                              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 h-auto text-base shadow-lg shadow-purple-200 transition-transform active:scale-95"
+                            >
+                              <Sparkles className="w-5 h-5 mr-2" />
+                              Mulai Generate Struktur
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+            </Tabs>
           </div>
 
           {/* Right Column: Metadata & Tags */}

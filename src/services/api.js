@@ -115,6 +115,8 @@ export const nlpAPI = {
   processDocument: (documentId) => api.post(`/nlp/process/${documentId}`),
   
   getStatus: (documentId) => api.get(`/nlp/status/${documentId}`),
+
+  generateOutline: (title) => api.post('/nlp/generate-outline', { title }),
 };
 
 // ============= VISUALIZATION API =============

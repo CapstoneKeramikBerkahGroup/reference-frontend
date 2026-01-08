@@ -931,55 +931,101 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="space-y-8">
-                {/* Analyzed Papers Section - Always show if there are analyzed documents */}
-                {zoteroDocuments.length > 0 ? (
+                
+                {/* 1. SECTION: SUDAH DI-ANALISIS (Dokumen PDF Lokal) */}
+                {zoteroDocuments.length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600" />
-                      {language === 'id' ? 'Paper Teranalisis' : 'Analyzed Papers'}
+                      {language === 'id' ? 'Paper Teranalisis (Siap Digunakan)' : 'Analyzed Papers (Ready)'}
                       <Badge variant="secondary" className="bg-green-100 text-green-700">{zoteroDocuments.length}</Badge>
                     </h3>
                     <div className="space-y-3">
                       {zoteroDocuments.map((doc) => (
-                    <Card
-                      key={doc.id}
-                      className="border-blue-200 bg-white shadow-sm hover:shadow-md transition-all group border-l-4 border-l-blue-500"
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Book className="w-6 h-6 text-blue-600" />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors break-words min-w-0 flex-1" title={doc.judul}>
-                                {doc.judul}
-                              </h3>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">Zotero</Badge>
-                                {getStatusBadge(doc.status_analisis)}
+                        <Card key={doc.id} className="border-blue-200 bg-white/50 border-l-4 border-l-green-500">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <FileText className="w-5 h-5 text-green-600" />
                               </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-gray-900 truncate" title={doc.judul}>{doc.judul}</h3>
+                                <p className="text-xs text-gray-500 flex items-center gap-2">
+                                  <span>PDF Downloaded</span> • {format(new Date(doc.tanggal_unggah), 'dd MMM yyyy')}
+                                </p>
+                              </div>
+                              <Button size="sm" variant="outline" onClick={() => navigate(`/documents/${doc.id}`)}>
+                                {language === 'id' ? 'Lihat Detail' : 'View Detail'}
+                              </Button>
                             </div>
-                            <div className="flex items-center gap-3 text-sm text-gray-600 flex-wrap">
-                              <span className="truncate flex items-center min-w-0 max-w-xs" title={doc.nama_file}>
-                                <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
-                                {doc.nama_file}
-                              </span>
-                              <span className="flex items-center flex-shrink-0 whitespace-nowrap">
-                                <Clock className="w-3.5 h-3.5 mr-1.5" />
-                                {format(new Date(doc.tanggal_unggah), 'MMM dd, yyyy')}
-                              </span>
-                              <span className="flex-shrink-0 whitespace-nowrap">{formatFileSize(doc.ukuran_kb * 1024)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                   </div>
-                ) : null}
+                )}
+
+                {/* 2. SECTION: TERSEDIA DI ZOTERO (Metadata Only) - INI YANG HILANG SEBELUMNYA */}
+                {references.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <CloudDownload className="w-5 h-5 text-blue-600" />
+                      {language === 'id' ? 'Tersedia untuk Dianalisis' : 'Available for Analysis'}
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">{references.length}</Badge>
+                    </h3>
+                    
+                    <div className="grid gap-3">
+                      {references.filter(ref => !ref.local_document_id).map((ref) => (
+                        <Card key={ref.id} className="border border-slate-200 hover:border-blue-300 transition-all bg-white">
+                          <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <h4 className="font-medium text-slate-900 leading-tight line-clamp-2" title={ref.title}>
+                                {ref.title}
+                              </h4>
+                              <div className="text-xs text-slate-500 flex flex-wrap gap-x-3 gap-y-1 items-center">
+                                <span className="flex items-center gap-1">
+                                  <Book className="w-3 h-3" /> {ref.authors || 'Unknown Author'}
+                                </span>
+                                {ref.year && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" /> {ref.year}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <Button 
+                              onClick={() => handleAnalyzeZotero(ref.id)}
+                              disabled={analyzingIds.includes(ref.id)}
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm whitespace-nowrap w-full sm:w-auto"
+                            >
+                              {analyzingIds.includes(ref.id) ? (
+                                <>
+                                  <Sparkles className="w-3 h-3 mr-2 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4 mr-2" />
+                                  {language === 'id' ? 'Analisis PDF' : 'Analyze PDF'}
+                                </>
+                              )}
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    {/* Pesan jika semua sudah di-download */}
+                    {references.length > 0 && references.filter(ref => !ref.local_document_id).length === 0 && (
+                       <p className="text-center text-sm text-gray-500 italic mt-4">
+                         {language === 'id' ? 'Semua referensi Zotero sudah dianalisis.' : 'All Zotero references have been analyzed.'}
+                       </p>
+                    )}
+                  </div>
+                )}
+
               </div>
             )}
           </>

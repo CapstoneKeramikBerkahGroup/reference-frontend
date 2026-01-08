@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 // --- 3. Specialization Options (Lab-lab di SI Telkom) ---
 const SPECIALIZATIONS = [
   { value: 'EISD', label: 'EISD - Enterprise Information System Development' },
-  { value: 'EDM', label: 'EDM - Enterprise Digital Management' },
+  { value: 'EDM', label: 'EDM - Enterprise Data Management' },
   { value: 'EIM', label: 'EIM - Enterprise Information Management' },
   { value: 'ERP', label: 'ERP - Enterprise Resource Planning' },
   { value: 'SAG', label: 'SAG - System Analysis and Governance' },

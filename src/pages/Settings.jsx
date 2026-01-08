@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { integrationAPI } from '../services/api';
-import { Save, RefreshCw, Link as LinkIcon, ArrowLeft, Book, CheckCircle2, Eye, Sparkles } from 'lucide-react';
+import { Save, RefreshCw, Link2, ArrowLeft, Book, CheckCircle2, Eye, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -16,36 +15,66 @@ const Settings = () => {
   const [references, setReferences] = useState([]);
   const [analyzingIds, setAnalyzingIds] = useState([]); // Track sedang dianalisis
   
+  // STATE YANG BENAR DAN KONSISTEN
   const [formData, setFormData] = useState({
-    user_id_zotero: '',
-    api_key_zotero: ''
+    user_id_zotero: '', 
+    api_key_zotero: '' 
   });
 
   useEffect(() => {
     fetchReferences();
+    fetchZoteroConfig();
   }, []);
+
+  const fetchZoteroConfig = async () => {
+    try {
+      const res = await integrationAPI.getConfig();
+      // Cek apakah data valid (id > 0)
+      if (res.data && res.data.id > 0) {
+        setFormData({
+          user_id_zotero: res.data.zotero_user_id || '', 
+          api_key_zotero: res.data.api_key || '' 
+        });
+      }
+    } catch (err) {
+      console.log("Belum ada konfigurasi Zotero.");
+    }
+  };
 
   const fetchReferences = async () => {
     try {
       const res = await integrationAPI.getReferences();
-      setReferences(res.data);
+      setReferences(res.data.data || res.data); // Handle structure variation
     } catch (err) {
       console.error("Failed to fetch references:", err);
     }
   };
 
   const handleConnect = async () => {
+    // Validasi menggunakan key yang benar
     if (!formData.user_id_zotero || !formData.api_key_zotero) {
-      toast.warning("Please fill in both User ID and API Key");
-      return;
+        toast.warning("Mohon isi User ID dan API Key Zotero.");
+        return;
     }
 
     setLoading(true);
     try {
-      await integrationAPI.connectZotero(formData);
-      toast.success("Zotero connected successfully!");
+      // Panggil API
+      const res = await integrationAPI.connectZotero({
+        user_id_zotero: formData.user_id_zotero.toString().trim(),
+        api_key_zotero: formData.api_key_zotero.trim(),
+        library_type: "user"
+      });
+      
+      toast.success(res.data.message || "Berhasil terhubung ke Zotero!");
+      
+      // Auto-sync setelah connect
+      handleSync();
+
     } catch (err) {
-      toast.error("Failed to connect. Check your credentials.");
+      console.error("Zotero Connect Error:", err);
+      const msg = err.response?.data?.detail || "Gagal menghubungkan. Cek kredensial Anda.";
+      toast.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setLoading(false);
     }
@@ -58,7 +87,7 @@ const Settings = () => {
       toast.success(`Synced ${res.data.synced_count} items from Zotero!`);
       await fetchReferences(); 
     } catch (err) {
-      toast.error("Sync failed. Make sure you are connected.");
+      toast.error("Sync failed. Pastikan koneksi internet stabil.");
     } finally {
       setSyncing(false);
     }
@@ -68,20 +97,15 @@ const Settings = () => {
     setAnalyzingIds(prev => [...prev, referenceId]);
     
     try {
-      // Panggil API untuk analisis
       const res = await integrationAPI.analyzeZoteroReference(referenceId);
       toast.success("Analysis complete!");
-      
-      // Refresh data referensi untuk update local_document_id
       await fetchReferences();
       
-      // Navigasi ke halaman document yang baru dibuat
       if (res.data.document_id) {
         navigate(`/documents/${res.data.document_id}`);
       }
     } catch (err) {
       toast.error("Analysis failed. Please try again.");
-      console.error("Analyze error:", err);
     } finally {
       setAnalyzingIds(prev => prev.filter(id => id !== referenceId));
     }
@@ -107,7 +131,7 @@ const Settings = () => {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <LinkIcon className="w-6 h-6 text-blue-600" />
+              <Link2 className="w-6 h-6 text-blue-600" />
               <CardTitle>Zotero Integration</CardTitle>
             </div>
             <CardDescription>
@@ -115,25 +139,25 @@ const Settings = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Zotero User ID</Label>
-                <Input 
-                  placeholder="e.g., 19083362" 
-                  value={formData.user_id_zotero}
-                  onChange={(e) => setFormData({...formData, user_id_zotero: e.target.value})}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Zotero User ID</Label>
+              <Input 
+                placeholder="e.g., 1234567" 
+                // PERBAIKAN: Binding ke state yang benar
+                value={formData.user_id_zotero} 
+                onChange={(e) => setFormData({...formData, user_id_zotero: e.target.value})}
+              />
+            </div>
               
-              <div className="space-y-2">
-                <Label>Zotero API Key (Private Key)</Label>
-                <Input 
-                  type="password" 
-                  placeholder="e.g., zoDt..." 
-                  value={formData.api_key_zotero}
-                  onChange={(e) => setFormData({...formData, api_key_zotero: e.target.value})}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Zotero API Key</Label>
+              <Input 
+                type="password" 
+                placeholder="e.g., zoKey..." 
+                // PERBAIKAN: Binding ke state yang benar
+                value={formData.api_key_zotero}
+                onChange={(e) => setFormData({...formData, api_key_zotero: e.target.value})}
+              />
             </div>
 
             <div className="flex gap-4 pt-4">
@@ -148,7 +172,7 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Card Daftar Referensi dengan CardFooter */}
+        {/* Card Daftar Referensi */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -173,7 +197,6 @@ const Settings = () => {
                       </div>
                     </CardContent>
                     <CardFooter className="pt-2 gap-2 pb-4">
-                      {/* Tombol Analyze / View Detail */}
                       {ref.local_document_id ? (
                         <Button 
                           variant="outline" 
@@ -199,7 +222,6 @@ const Settings = () => {
                           Analyze AI
                         </Button>
                       )}
-                      {/* Tombol Link Asli */}
                       {ref.url && (
                         <Button 
                           variant="ghost" 
@@ -208,17 +230,12 @@ const Settings = () => {
                           onClick={() => window.open(ref.url, '_blank')}
                           title="Open in Zotero Web"
                         >
-                          <LinkIcon className="w-4 h-4" />
+                          <Link2 className="w-4 h-4" />
                         </Button>
                       )}
                     </CardFooter>
                   </Card>
                 ))}
-                {references.length > 10 && (
-                  <div className="p-4 text-center text-xs text-gray-500 border-t bg-gray-50 rounded-lg">
-                    ... and {references.length - 10} more items.
-                  </div>
-                )}
               </div>
             )}
           </CardContent>

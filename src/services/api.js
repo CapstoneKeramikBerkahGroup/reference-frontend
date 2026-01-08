@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -17,27 +17,18 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Check if this is an integration endpoint (Mendeley/Zotero)
-      const url = error.config?.url || '';
-      const isIntegrationEndpoint = url.includes('/mendeley/') || url.includes('/integration/');
-      
-      // Don't auto logout for integration endpoints - let component handle it
-      if (!isIntegrationEndpoint) {
-        // Unauthorized - clear token and redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      }
+    if (error.response && error.response.status === 401) {
+      // Jika 401, bersihkan token dan redirect ke login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -112,9 +103,16 @@ export const nlpAPI = {
   
   summarize: (data) => api.post('/nlp/summarize', data),
   
-  processDocument: (documentId) => api.post(`/nlp/process/${documentId}`),
+  processDocument: (documentId, language = 'id') => api.post(`/nlp/process/${documentId}?language=${language}`),
+
+  generateOutline: (data) => api.post('/nlp/generate-outline', data),
   
   getStatus: (documentId) => api.get(`/nlp/status/${documentId}`),
+
+  generateIdeas: (data) => api.post('/nlp/generate-ideas', data),
+
+  saveIdea: (data) => api.post('/nlp/ideas/save', data),
+  getIdeaHistory: () => api.get('/nlp/ideas/history'),
 };
 
 // ============= VISUALIZATION API =============
@@ -133,12 +131,11 @@ export const usersAPI = {
 
 // ============= INTEGRATION API (Zotero) =============
 export const integrationAPI = {
-  connectZotero: (data) => api.post('/integration/zotero/connect', data),
+  connectZotero: (data) => api.post('/integration/zotero/config', data),
   syncZotero: () => api.post('/integration/zotero/sync'),
   getReferences: () => api.get('/integration/references'),
   analyzeZotero: (refId) => api.post(`/integration/zotero/analyze/${refId}`),
   getConfig: () => api.get('/integration/zotero/config'),
-  saveConfig: (data) => api.post('/integration/zotero/config', data),
   disconnect: () => api.post('/integration/zotero/disconnect'),
 };
 
@@ -165,20 +162,20 @@ export const dosenAPI = {
   updateCatatan: (catatanId, data) => api.put(`/dosen/catatan/${catatanId}`, data),
   deleteCatatan: (catatanId) => api.delete(`/dosen/catatan/${catatanId}`),
   
-  // Validasi Referensi
-  validateReferensi: (referensiId, data) => api.put(`/dosen/referensi/${referensiId}/validate`, data),
-  getPendingReferensi: () => api.get('/dosen/referensi/pending'),
-  getReferensiHistory: (params) => api.get('/dosen/referensi/history', { params }),
+  // Paragraph Comments
+  addParagraphComment: (dokumenId, data) => api.post(`/dosen/dokumen/${dokumenId}/paragraph-comments`, data),
+  getParagraphComments: (dokumenId) => api.get(`/dosen/dokumen/${dokumenId}/paragraph-comments`),
+  updateParagraphComment: (commentId, data) => api.put(`/dosen/paragraph-comments/${commentId}`, data),
+  deleteParagraphComment: (commentId) => api.delete(`/dosen/paragraph-comments/${commentId}`),
+  
+  // Comment Replies
+  addCommentReply: (commentId, data) => api.post(`/dosen/paragraph-comments/${commentId}/replies`, data),
 };
 
 // ============= MAHASISWA API =============
 export const mahasiswaAPI = {
   // Pilih Dosen Pembimbing
   chooseDosen: (dosenId) => api.put(`/users/mahasiswa/choose-dosen/${dosenId}`),
-  
-  // Referensi Management
-  getMyReferences: (params) => api.get('/documents/referensi/my-references', { params }),
-  getReferencesSummary: () => api.get('/documents/referensi/summary'),
 };
 
 // ============= MENDELEY API =============
@@ -196,3 +193,18 @@ export const mendeleyAPI = {
 };
 
 export default api;
+
+export const draftsAPI = {
+  // Perbaikan: Hapus { ... } dan ganti dengan headers yang benar
+  upload: (formData) => api.post('/drafts/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' } 
+  }),
+
+  getMyDrafts: () => api.get('/drafts/my-drafts'),
+
+  getComments: (draftId) => api.get(`/drafts/${draftId}/comments`),
+
+  postComment: (draftId, data) => api.post(`/drafts/${draftId}/comments`, data),
+  
+  deleteComment: (commentId) => api.delete(`/drafts/comments/${commentId}`),
+};

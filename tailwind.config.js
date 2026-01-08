@@ -82,6 +82,29 @@ module.exports = {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       fontFamily: {
+        // Inter untuk Heading (Bold, Titles, Headers)
+        'inter': [
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif'
+        ],
+        // Poppins untuk Body (Paragraphs, Buttons, General Text)
+        'poppins': [
+          'Poppins',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif'
+        ],
+        // Default sans akan menggunakan Poppins
         sans: [
           'Poppins',
           'ui-sans-serif',

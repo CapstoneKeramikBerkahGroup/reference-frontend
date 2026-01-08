@@ -1,57 +1,162 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // Kita pakai axios langsung jika belum ada di api.js
+import axios from 'axios';
 
 // --- UI Components ---
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input'; 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
 import { toast } from 'sonner';
+
+// --- Import Komponen ---
+import Navbar from '../components/Navbar';
+import GapAnalysisTable from '../components/GapAnalysisTable';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // --- Icons ---
 import { 
-  ArrowLeft, Scale, FileText, Sparkles, 
-  ArrowRightLeft, Lightbulb, AlertCircle, CheckCircle2 
+  ArrowLeft, Scale, Sparkles, AlertCircle, CheckCircle2, History, Clock, Search, FileText 
 } from 'lucide-react';
 
 import { documentsAPI } from '../services/api';
 
 const Comparison = () => {
   const navigate = useNavigate();
+  const { language } = useLanguage(); 
   
   // --- State ---
   const [documents, setDocuments] = useState([]);
-  const [selectedDoc1, setSelectedDoc1] = useState('');
-  const [selectedDoc2, setSelectedDoc2] = useState('');
+  const [selectedDocIds, setSelectedDocIds] = useState([]); 
+  const [historyList, setHistoryList] = useState([]);
+  const [searchTerm, setSearchTerm] = useState(''); // State untuk Search Bar
   
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
-  // --- Load Documents on Mount ---
+  // --- Dictionary Bahasa ---
+  const t = {
+    id: {
+      back: "Kembali ke Dashboard",
+      headerTitle: "Matriks Analisis Gap",
+      pageTitle: "Perbandingan Multi-Dokumen",
+      description: "Pilih 2-5 dokumen untuk analisis otomatis.",
+      available: "Pustaka Dokumen",
+      selected: "Terpilih",
+      searchPlaceholder: "Cari judul dokumen...",
+      btnHistory: "Riwayat Analisis",
+      btnAnalyzing: "Menganalisis",
+      btnGenerate: "Mulai Analisis Gap",
+      papers: "Dokumen",
+      alertMin: "Pilih minimal 2 dokumen.",
+      alertMax: "Maksimal 5 dokumen.",
+      successMsg: "Analisis selesai!",
+      errorMsg: "Gagal membuat analisis.",
+      historyTitle: "Arsip Analisis",
+      historyDesc: "Klik untuk memuat ulang hasil analisis sebelumnya.",
+      historyEmpty: "Belum ada riwayat.",
+      historyRestored: "Data berhasil dimuat ulang!",
+      historyLoadError: "Gagal memuat data."
+    },
+    en: {
+      back: "Back to Dashboard",
+      headerTitle: "Gap Analysis Matrix",
+      pageTitle: "Multi-Document Comparison",
+      description: "Select 2-5 papers for automatic analysis.",
+      available: "Document Library",
+      selected: "Selected",
+      searchPlaceholder: "Search document title...",
+      btnHistory: "Analysis History",
+      btnAnalyzing: "Analyzing",
+      btnGenerate: "Start Gap Analysis",
+      papers: "Papers",
+      alertMin: "Please select at least 2 documents.",
+      alertMax: "Maximum 5 documents allowed.",
+      successMsg: "Analysis completed!",
+      errorMsg: "Analysis failed.",
+      historyTitle: "Analysis Archive",
+      historyDesc: "Click to reload previous analysis results.",
+      historyEmpty: "No history found.",
+      historyRestored: "Data restored successfully!",
+      historyLoadError: "Failed to load data."
+    }
+  };
+
+  const text = t[language] || t.en;
+
+  // --- 1. Load Data ---
   useEffect(() => {
-    const fetchDocs = async () => {
-      try {
-        const response = await documentsAPI.getAll();
-        // Filter hanya dokumen yang sudah completed agar ada teksnya
-        const completedDocs = response.data.filter(d => d.status_analisis === 'completed');
-        setDocuments(completedDocs);
-      } catch (err) {
-        toast.error("Failed to load documents");
-      }
+    const initData = async () => {
+      await fetchDocs();
+      await fetchHistory();
     };
-    fetchDocs();
+    initData();
   }, []);
 
-  // --- Handle Comparison ---
-  const handleCompare = async () => {
-    if (!selectedDoc1 || !selectedDoc2) {
-      toast.warning("Please select two documents to compare.");
-      return;
+  const fetchDocs = async () => {
+    try {
+      const response = await documentsAPI.getAll();
+      const completedDocs = response.data.filter(d => d.status_analisis === 'completed');
+      setDocuments(completedDocs);
+    } catch (err) {
+      toast.error("Failed to load documents");
     }
-    if (selectedDoc1 === selectedDoc2) {
-      toast.warning("Please select two DIFFERENT documents.");
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const res = await axios.get('/api/gap-analysis/list', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      setHistoryList(res.data);
+    } catch (err) {
+      console.error("History load error", err);
+    }
+  };
+
+  // --- 2. Restore History ---
+  const loadHistoryItem = async (id) => {
+    try {
+        const res = await axios.get(`/api/gap-analysis/${id}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const analysisData = res.data.result_data || res.data; 
+        setResult(analysisData); 
+        
+        setTimeout(() => {
+            document.getElementById('analysis-result')?.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+        
+        toast.success(text.historyRestored);
+    } catch (err) {
+        toast.error(text.historyLoadError);
+    }
+  };
+
+  // --- 3. Interaction Logic ---
+  const toggleSelection = (docId) => {
+    if (selectedDocIds.includes(docId)) {
+      setSelectedDocIds(prev => prev.filter(id => id !== docId));
+    } else {
+      if (selectedDocIds.length >= 5) {
+        toast.warning(text.alertMax);
+        return;
+      }
+      setSelectedDocIds(prev => [...prev, docId]);
+    }
+  };
+
+  // --- Filter Dokumen Berdasarkan Search ---
+  const filteredDocuments = documents.filter(doc => 
+    doc.judul.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleAnalyze = async () => {
+    if (selectedDocIds.length < 2) {
+      toast.warning(text.alertMin);
       return;
     }
 
@@ -60,23 +165,37 @@ const Comparison = () => {
     setResult(null);
 
     try {
-      // Panggil endpoint baru yang kita buat di backend
-      // (Asumsi base URL API Anda sudah di set di axios instance atau proxy)
-      const response = await axios.post('/api/nlp/compare-gap', {
-        doc_id_1: selectedDoc1,
-        doc_id_2: selectedDoc2
+      const response = await axios.post('/api/nlp/analyze-gap-matrix', {
+        doc_ids: selectedDocIds,
+        language: language 
       }, {
-        headers: {
-            // Pastikan token auth terkirim jika pakai interceptor
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
 
       setResult(response.data);
-      toast.success("Comparison analysis complete!");
+      toast.success(text.successMsg);
+      
+      // Auto-save logic
+      try {
+          const firstDoc = documents.find(d => d.id === selectedDocIds[0]);
+          const docTitle = firstDoc ? firstDoc.judul.substring(0, 30) : "Analisis";
+          const saveTitle = `${docTitle}... (+${selectedDocIds.length - 1})`;
+          
+          await axios.post('/api/gap-analysis/save', {
+              title: saveTitle,
+              result: response.data
+          }, { 
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
+          });
+          fetchHistory();
+      } catch (saveErr) { console.error(saveErr); }
+      
+      setTimeout(() => {
+        document.getElementById('analysis-result')?.scrollIntoView({ behavior: 'smooth' });
+      }, 500);
+
     } catch (err) {
-      console.error(err);
-      const msg = err.response?.data?.detail || "Failed to analyze documents.";
+      const msg = err.response?.data?.detail || text.errorMsg;
       setError(msg);
       toast.error(msg);
     } finally {
@@ -84,249 +203,196 @@ const Comparison = () => {
     }
   };
 
-  // Helper untuk mendapatkan judul dokumen berdasarkan ID
-  const getDocTitle = (id) => documents.find(d => d.id.toString() === id.toString())?.judul || "Document";
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background pb-20">
-      
-      {/* --- Header (Sama seperti Dashboard) --- */}
-      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50 h-14 sm:h-16">
-        <div className="container mx-auto px-3 sm:px-4 lg:px-8 h-full flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back to</span> Dashboard
-          </Button>
-          <div className="flex items-center gap-2 font-serif font-semibold text-base sm:text-lg">
-            <Scale className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-            Gap Analysis
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50/50 pb-20">
+      <Navbar /> 
 
-      <main className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-6xl">
+      {/* Header Kecil dengan tombol kembali */}
+      <div className="bg-white border-b py-3 sticky top-[64px] z-30 shadow-sm">
+        <div className="container mx-auto px-4 flex items-center justify-between">
+           <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/dashboard')} 
+                className="gap-2 text-slate-500 hover:text-slate-900"
+            >
+                <ArrowLeft className="w-4 h-4" /> 
+                {text.back}
+            </Button>
+            <div className="flex items-center gap-2 font-serif text-slate-800 font-bold">
+                <Scale className="w-5 h-5 text-blue-600" />
+                <span className="hidden sm:inline">{text.headerTitle}</span>
+            </div>
+        </div>
+      </div>
+
+      <main className="container mx-auto px-4 py-8 max-w-6xl space-y-8">
         
-        {/* --- 1. Selection Section --- */}
-        <div className="text-center mb-6 sm:mb-8 space-y-2">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-serif font-bold px-2">Compare & Find Research Gaps</h1>
-          <p className="text-sm sm:text-base text-muted-foreground px-4">Select two papers to analyze their limitations, future works, and find potential research opportunities.</p>
+        {/* --- 1. Section: Document Selection Panel --- */}
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+            {/* Header Panel: Search & History Toolbar */}
+            <div className="p-4 sm:p-6 border-b bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                
+                {/* Judul & Counter */}
+                <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
+                        <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-slate-800 text-lg leading-tight">{text.available}</h2>
+                        <p className="text-xs text-slate-500">{documents.length} papers available</p>
+                    </div>
+                    <Badge variant={selectedDocIds.length >= 2 ? "default" : "secondary"} className="ml-2 h-7 px-3">
+                        {selectedDocIds.length} / 5 {text.selected}
+                    </Badge>
+                </div>
+
+                {/* Toolbar Kanan: Search & History */}
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    {/* Search Bar */}
+                    <div className="relative flex-1 md:w-64">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                        <Input 
+                            placeholder={text.searchPlaceholder} 
+                            className="pl-9 bg-white"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Tombol History (Dipindah kesini agar terlihat) */}
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <Button variant="outline" className="gap-2 text-slate-600 hover:text-blue-600 border-slate-200 hover:border-blue-200 bg-white">
+                                <History className="w-4 h-4" />
+                                <span className="hidden sm:inline">{text.btnHistory}</span>
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent>
+                            <SheetHeader>
+                                <SheetTitle className="flex items-center gap-2">
+                                    <History className="w-5 h-5" />
+                                    {text.historyTitle}
+                                </SheetTitle>
+                                <SheetDescription>
+                                    {text.historyDesc}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <div className="mt-6 space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+                                {historyList.length === 0 ? (
+                                    <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-lg">
+                                        <p className="text-sm">{text.historyEmpty}</p>
+                                    </div>
+                                ) : (
+                                    historyList.map((item) => (
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => loadHistoryItem(item.id)}
+                                            className="group p-3 border rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all"
+                                        >
+                                            <h5 className="font-medium text-sm text-slate-700 line-clamp-2 group-hover:text-blue-700">
+                                                {item.title}
+                                            </h5>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                                    <Clock className="w-3 h-3" />
+                                                    {new Date(item.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+                </div>
+            </div>
+
+            {/* Grid Dokumen (Scrollable agar tidak memanjang ke bawah) */}
+            <div className="p-4 sm:p-6 bg-slate-50/30">
+                {filteredDocuments.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                        <Search className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                        <p>Tidak ada dokumen yang cocok dengan "{searchTerm}"</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+                        {filteredDocuments.map(doc => {
+                            const isSelected = selectedDocIds.includes(doc.id);
+                            return (
+                                <div 
+                                    key={doc.id}
+                                    onClick={() => toggleSelection(doc.id)}
+                                    className={`
+                                        group relative p-4 rounded-xl border cursor-pointer transition-all duration-200
+                                        ${isSelected 
+                                            ? 'border-blue-500 bg-blue-50/60 ring-1 ring-blue-500 shadow-sm' 
+                                            : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-md'}
+                                    `}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <Checkbox 
+                                            checked={isSelected}
+                                            className={`mt-1 ${isSelected ? 'data-[state=checked]:bg-blue-600 border-blue-600' : ''}`}
+                                        />
+                                        <div className="flex-1">
+                                            {/* JUDUL SAJA (Hanya ini yang diminta) */}
+                                            <h4 className={`font-semibold text-sm leading-snug ${isSelected ? 'text-blue-800' : 'text-slate-700'}`}>
+                                                {doc.judul}
+                                            </h4>
+                                        </div>
+                                    </div>
+                                    {isSelected && (
+                                        <div className="absolute top-3 right-3 text-blue-600 bg-white rounded-full">
+                                            <CheckCircle2 className="w-5 h-5" />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Action Bar (Sticky Bottom Effect) */}
+                <div className="mt-6 pt-4 border-t flex justify-end">
+                    <Button 
+                        size="lg" 
+                        onClick={handleAnalyze} 
+                        disabled={analyzing || selectedDocIds.length < 2}
+                        className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200/50 transition-all w-full md:w-auto font-semibold"
+                    >
+                        {analyzing ? (
+                            <>
+                                <Sparkles className="w-4 h-4 mr-2 animate-spin" /> 
+                                {text.btnAnalyzing}...
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles className="w-4 h-4 mr-2" /> {text.btnGenerate}
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
         </div>
 
-        <Card className="border-border/50 shadow-md mb-6 sm:mb-8 bg-white/50 backdrop-blur-sm">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8">
-              
-              {/* Doc 1 Selector */}
-              <div className="flex-1 w-full space-y-2">
-                <label className="text-sm font-medium ml-1">First Document (Paper A)</label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <select 
-                    className="flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
-                    value={selectedDoc1}
-                    onChange={(e) => setSelectedDoc1(e.target.value)}
-                  >
-                    <option value="" disabled>Select a processed document...</option>
-                    {documents.map(doc => (
-                      <option key={doc.id} value={doc.id}>{doc.judul}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* VS Icon */}
-              <div className="flex-shrink-0 pt-6">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <ArrowRightLeft className="w-5 h-5 text-primary" />
-                </div>
-              </div>
-
-              {/* Doc 2 Selector */}
-              <div className="flex-1 w-full space-y-2">
-                <label className="text-sm font-medium ml-1">Second Document (Paper B)</label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <select 
-                    className="flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
-                    value={selectedDoc2}
-                    onChange={(e) => setSelectedDoc2(e.target.value)}
-                  >
-                    <option value="" disabled>Select a processed document...</option>
-                    {documents.map(doc => (
-                      <option key={doc.id} value={doc.id} disabled={doc.id == selectedDoc1}>{doc.judul}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-            </div>
-
-            <div className="mt-6 flex justify-center">
-              <Button 
-                size="lg" 
-                onClick={handleCompare} 
-                disabled={analyzing || !selectedDoc1 || !selectedDoc2}
-                className="w-full md:w-auto min-w-[200px]"
-              >
-                {analyzing ? (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2 animate-spin" /> Analyzing Gaps...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" /> Analyze Research Gap
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* --- 2. Error State --- */}
+        {/* --- Error Alert --- */}
         {error && (
-          <Alert variant="destructive" className="mb-6">
+          <Alert variant="destructive" className="animate-in slide-in-from-top-2 border-red-200 bg-red-50 text-red-800">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* --- 3. Results Section --- */}
-        {result && !analyzing && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            
-            {/* KEYWORD OVERLAP */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Unique to A */}
-                <Card className="border-l-4 border-l-blue-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Unique to Paper A</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-2">
-                            {result.keyword_comparison.unique_to_doc1.length > 0 ? (
-                                result.keyword_comparison.unique_to_doc1.map((kw, i) => (
-                                    <Badge key={i} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">{kw.kata || kw}</Badge>
-                                ))
-                            ) : <span className="text-xs italic text-muted-foreground">No unique keywords</span>}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Intersection */}
-                <Card className="border-l-4 border-l-purple-500 bg-purple-50/30">
-                    <CardHeader className="pb-2 text-center">
-                        <CardTitle className="text-sm font-bold text-purple-700 flex items-center justify-center gap-2">
-                             <CheckCircle2 className="w-4 h-4" /> Common Topics (Intersection)
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                         <div className="flex flex-wrap gap-2 justify-center">
-                            {result.keyword_comparison.common_topics.length > 0 ? (
-                                result.keyword_comparison.common_topics.map((kw, i) => (
-                                    <Badge key={i} className="bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-200">{kw.kata || kw}</Badge>
-                                ))
-                            ) : <span className="text-xs italic text-muted-foreground">No overlap found</span>}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Unique to B */}
-                <Card className="border-l-4 border-l-orange-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Unique to Paper B</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="flex flex-wrap gap-2">
-                            {result.keyword_comparison.unique_to_doc2.length > 0 ? (
-                                result.keyword_comparison.unique_to_doc2.map((kw, i) => (
-                                    <Badge key={i} variant="secondary" className="bg-orange-50 text-orange-700 hover:bg-orange-100">{kw.kata || kw}</Badge>
-                                ))
-                            ) : <span className="text-xs italic text-muted-foreground">No unique keywords</span>}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* GAP ANALYSIS CONTENT */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Paper A Analysis */}
-                <Card className="border-border/50">
-                    <CardHeader className="bg-accent/5 border-b">
-                        <CardTitle className="font-serif text-lg text-primary line-clamp-1" title={getDocTitle(selectedDoc1)}>
-                            Analysis: {getDocTitle(selectedDoc1)}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div>
-                            <h4 className="font-semibold flex items-center gap-2 mb-2 text-destructive">
-                                <AlertCircle className="w-4 h-4" /> Limitations / Weaknesses
-                            </h4>
-                            <div className="bg-destructive/5 p-4 rounded-lg text-sm text-foreground/80 leading-relaxed">
-                                {result.gap_analysis.doc1_analysis.gap_summary || result.gap_analysis.doc1_analysis.limitations_text || "No limitation section detected."}
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold flex items-center gap-2 mb-2 text-green-600">
-                                <Lightbulb className="w-4 h-4" /> Future Work Suggestions
-                            </h4>
-                            <p className="text-sm text-muted-foreground italic">
-                                {result.gap_analysis.doc1_analysis.future_work_text || "No future work section detected."}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Paper B Analysis */}
-                <Card className="border-border/50">
-                    <CardHeader className="bg-accent/5 border-b">
-                        <CardTitle className="font-serif text-lg text-primary line-clamp-1" title={getDocTitle(selectedDoc2)}>
-                            Analysis: {getDocTitle(selectedDoc2)}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div>
-                            <h4 className="font-semibold flex items-center gap-2 mb-2 text-destructive">
-                                <AlertCircle className="w-4 h-4" /> Limitations / Weaknesses
-                            </h4>
-                            <div className="bg-destructive/5 p-4 rounded-lg text-sm text-foreground/80 leading-relaxed">
-                                {result.gap_analysis.doc2_analysis.gap_summary || result.gap_analysis.doc2_analysis.limitations_text || "No limitation section detected."}
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold flex items-center gap-2 mb-2 text-green-600">
-                                <Lightbulb className="w-4 h-4" /> Future Work Suggestions
-                            </h4>
-                            <p className="text-sm text-muted-foreground italic">
-                                {result.gap_analysis.doc2_analysis.future_work_text || "No future work section detected."}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-            </div>
-
-            {/* --- Insight Box --- */}
-            <Card className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-none shadow-lg">
-                <CardContent className="p-8 text-center">
-                    <h3 className="text-2xl font-serif font-bold mb-4 flex items-center justify-center gap-2">
-                        <Sparkles className="w-6 h-6 text-yellow-300" />
-                        Research Gap Synthesis
-                    </h3>
-                    
-                    {/* Tampilkan hasil sintesis AI langsung, bukan template manual */}
-                    <div className="text-blue-50 max-w-3xl mx-auto text-lg leading-relaxed italic">
-                        "{result.gap_analysis.synthesis}"
-                    </div>
-                    
-                    <div className="mt-4 text-sm text-blue-200">
-                        *This synthesis is generated by analyzing the Limitations and Future Work sections of both papers.
-                    </div>
-                </CardContent>
-            </Card>
-
-          </div>
-        )}
+        {/* --- 2. Section: Result Area --- */}
+        <div id="analysis-result" className="scroll-mt-24">
+            {result && (
+                <GapAnalysisTable 
+                    data={result.matrix} 
+                    synthesis={result.synthesis} 
+                />
+            )}
+        </div>
 
       </main>
     </div>

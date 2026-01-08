@@ -37,11 +37,10 @@ const DosenDashboard = () => {
   
   const [stats, setStats] = useState(null);
   const [mahasiswaList, setMahasiswaList] = useState([]);
-  const [pendingReferensi, setPendingReferensi] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('overview'); // overview, mahasiswa, referensi
+  const [activeTab, setActiveTab] = useState('overview'); // overview, mahasiswa
 
   useEffect(() => {
     fetchDashboardData();
@@ -52,16 +51,14 @@ const DosenDashboard = () => {
     setError('');
     
     try {
-      const [statsRes, mahasiswaRes, referensiRes, requestsRes] = await Promise.all([
+      const [statsRes, mahasiswaRes, requestsRes] = await Promise.all([
         dosenAPI.getDashboardStats(),
         dosenAPI.getMahasiswaBimbingan(),
-        dosenAPI.getPendingReferensi(),
         api.get('/pembimbing/incoming-requests')
       ]);
       
       setStats(statsRes.data);
       setMahasiswaList(mahasiswaRes.data);
-      setPendingReferensi(referensiRes.data);
       
       // Filter only pending requests and match specialization
       const userSpec = user?.bidang_keahlian;
@@ -161,17 +158,6 @@ const DosenDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 hover:shadow-lg transition-shadow border-orange-200 bg-orange-50/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <AlertCircle className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats?.referensi_pending || 0}</div>
-              <p className="text-xs text-muted-foreground">References to validate</p>
-            </CardContent>
-          </Card>
-
           <Card 
             className="border-border/50 hover:shadow-lg transition-all cursor-pointer border-red-200 bg-red-50/50 hover:bg-red-100/50"
             onClick={() => navigate('/dosen/request-bimbingan')}
@@ -245,85 +231,6 @@ const DosenDashboard = () => {
               </Alert>
             )}
 
-            {/* Action Required - Papers with Pending References */}
-            {(() => {
-              // Group pending referensi by document
-              const groupedByDoc = pendingReferensi.reduce((acc, ref) => {
-                const docKey = ref.dokumen_id;
-                if (!acc[docKey]) {
-                  acc[docKey] = {
-                    dokumen_id: ref.dokumen_id,
-                    dokumen_judul: ref.dokumen_judul,
-                    mahasiswa_nama: ref.mahasiswa_nama,
-                    pending_count: 0
-                  };
-                }
-                acc[docKey].pending_count += 1;
-                return acc;
-              }, {});
-              
-              const pendingDocuments = Object.values(groupedByDoc);
-              
-              return pendingDocuments.length > 0 ? (
-                <Card className="border-2 border-yellow-200 dark:border-yellow-900 bg-yellow-50/50 dark:bg-yellow-950/20">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                        <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-xl">Action Required</CardTitle>
-                        <CardDescription className="text-base">
-                          {pendingDocuments.length} document{pendingDocuments.length > 1 ? 's' : ''} waiting for your review
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {pendingDocuments.slice(0, 5).map((doc) => (
-                        <div
-                          key={doc.dokumen_id}
-                          className="flex items-center justify-between p-4 bg-background rounded-lg border hover:border-primary transition-all cursor-pointer group"
-                          onClick={() => handleViewDokumen(doc.dokumen_id)}
-                        >
-                          <div className="flex-1 min-w-0 mr-4">
-                            <div className="flex items-start gap-3 mb-1">
-                              <FileText className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                              <h3 className="font-semibold text-base group-hover:text-primary transition-colors line-clamp-1" title={doc.dokumen_judul}>
-                                {doc.dokumen_judul}
-                              </h3>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground ml-8">
-                              <span className="truncate max-w-[200px]">{doc.mahasiswa_nama}</span>
-                              <span>•</span>
-                              <Badge variant="secondary" className="font-semibold flex-shrink-0">
-                                {doc.pending_count} pending
-                              </Badge>
-                            </div>
-                          </div>
-                          <Button variant="outline" className="ml-4" onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/dosen/dokumen/${doc.dokumen_id}`, {
-                              state: { openReferences: true }
-                            });
-                          }}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Review
-                          </Button>
-                        </div>
-                      ))}
-                      {pendingDocuments.length > 5 && (
-                        <p className="text-sm text-muted-foreground text-center pt-2">
-                          And {pendingDocuments.length - 5} more document{pendingDocuments.length - 5 > 1 ? 's' : ''}...
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : null;
-            })()}
-
             {/* Stats Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Recent Mahasiswa */}
@@ -388,13 +295,6 @@ const DosenDashboard = () => {
                       <span className="text-sm">My Comments</span>
                     </div>
                     <span className="font-bold">{stats?.total_catatan || 0}</span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm font-medium">Pending Validation</span>
-                    </div>
-                    <span className="font-bold text-orange-600">{stats?.referensi_pending || 0}</span>
                   </div>
                 </CardContent>
               </Card>

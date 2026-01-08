@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner'; // Notifikasi modern
-import { TooltipProvider } from '@/components/ui/tooltip'; // Pembungkus tooltip Shadcn
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Contexts
@@ -28,11 +28,11 @@ import MahasiswaDosenSelection from './pages/MahasiswaDosenSelection';
 import PilihPembimbing from './pages/PilihPembimbing';
 import DosenPembimbingSaya from './pages/DosenPembimbingSaya';
 import DosenRequestBimbingan from './pages/DosenRequestBimbingan';
-import DosenPendingReferensi from './pages/DosenPendingReferensi';
-import MahasiswaReferensi from './pages/MahasiswaReferensi';
 import Profile from './pages/Profile';
 import Documents from './pages/Documents';
 import Footer from '@/components/Footer';
+import IdeaGenerator from '@/pages/IdeaGenerator';
+import DosenDrafting from '@/pages/DosenDrafting';
 
 // Protected Route Component
 const PrivateRoute = ({ children }) => {
@@ -45,13 +45,11 @@ const RootRedirect = () => {
   const token = localStorage.getItem('token');
   console.log('RootRedirect - Token:', token);
   
-  // If not logged in, show home page
   if (!token) {
     console.log('No token, showing Home page');
     return <Home />;
   }
   
-  // If logged in, redirect based on role
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   console.log('User role:', user.role);
   if (user.role === 'dosen') {
@@ -78,11 +76,29 @@ const LayoutWrapper = ({ children }) => {
   );
 };
 
+// Google Fonts Loader Component
+const FontLoader = () => {
+  useEffect(() => {
+    // Create link element for Google Fonts
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    return () => {
+      // Cleanup on unmount
+      document.head.removeChild(link);
+    };
+  }, []);
+
+  return null;
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {/* Toaster untuk menampilkan notifikasi (toast.success/error) di seluruh aplikasi */}
+        <FontLoader />
         <Toaster />
         
         <BrowserRouter>
@@ -97,180 +113,180 @@ const App = () => {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
 
-              {/* Protected Routes - Mahasiswa */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/documents" 
-                element={
-                  <PrivateRoute>
-                    <Documents />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/documents/:id" 
-                element={
-                  <PrivateRoute>
-                    <DocumentDetail />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/visualization" 
-                element={
-                  <PrivateRoute>
-                    <Visualization />
-                  </PrivateRoute>
-                } 
-              />
+                  {/* Protected Routes - Mahasiswa */}
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <PrivateRoute>
+                        <Dashboard />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/documents" 
+                    element={
+                      <PrivateRoute>
+                        <Documents />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/documents/:id" 
+                    element={
+                      <PrivateRoute>
+                        <DocumentDetail />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/visualization" 
+                    element={
+                      <PrivateRoute>
+                        <Visualization />
+                      </PrivateRoute>
+                    } 
+                  />
 
-              <Route 
-                path="/comparison" 
-                element={
-                  <PrivateRoute>
-                    <Comparison />
-                  </PrivateRoute>
-                } 
-              />
+                  <Route 
+                    path="/comparison" 
+                    element={
+                      <PrivateRoute>
+                        <Comparison />
+                      </PrivateRoute>
+                    } 
+                  />
 
-              <Route 
-                path="/settings" 
-                element={
-                  <PrivateRoute>
-                    <Settings />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/draft" 
-                element={
-                  <PrivateRoute>
-                    <Drafting />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/mahasiswa/referensi" 
-                element={
-                  <PrivateRoute>
-                    <MahasiswaReferensi />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/profile" 
-                element={
-                  <PrivateRoute>
-                    <Profile />
-                  </PrivateRoute>
-                } 
-              />
-              
-              {/* Protected Routes - Dosen */}
-              <Route 
-                path="/dosen/dashboard" 
-                element={
-                  <PrivateRoute>
-                    <DosenDashboard />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/dosen/mahasiswa/:mahasiswaId/dokumen" 
-                element={
-                  <PrivateRoute>
-                    <DosenMahasiswaDokumen />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/dosen/dokumen/:dokumenId" 
-                element={
-                  <PrivateRoute>
-                    <DosenDokumenDetail />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/dosen/mahasiswa-management" 
-                element={
-                  <PrivateRoute>
-                    <DosenMahasiswaManagement />
-                  </PrivateRoute>
-                } 
-              />
-              
-              {/* Mahasiswa Routes */}
-              <Route 
-                path="/mahasiswa/pilih-dosen" 
-                element={
-                  <PrivateRoute>
-                    <MahasiswaDosenSelection />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/mahasiswa/dosen-selection" 
-                element={
-                  <PrivateRoute>
-                    <PilihPembimbing />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/mahasiswa/dosen-pembimbing" 
-                element={
-                  <PrivateRoute>
-                    <DosenPembimbingSaya />
-                  </PrivateRoute>
-                } 
-              />
-              
-              {/* Dosen Routes - Request Bimbingan */}
-              <Route 
-                path="/dosen/request-bimbingan" 
-                element={
-                  <PrivateRoute>
-                    <DosenRequestBimbingan />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/dosen/pending-referensi" 
-                element={
-                  <PrivateRoute>
-                    <DosenPendingReferensi />
-                  </PrivateRoute>
-                } 
-              />
-              
-              <Route 
-                path="/dosen/mahasiswa" 
-                element={
-                  <PrivateRoute>
-                    <DosenRequestBimbingan />
-                  </PrivateRoute>
-                } 
-              />
+                  <Route 
+                    path="/settings" 
+                    element={
+                      <PrivateRoute>
+                        <Settings />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/draft" 
+                    element={
+                      <PrivateRoute>
+                        <Drafting />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/profile" 
+                    element={
+                      <PrivateRoute>
+                        <Profile />
+                      </PrivateRoute>
+                    } 
+                  />
+
+                  <Route 
+                    path="/idea-generator" 
+                    element={
+                      <PrivateRoute>
+                        <IdeaGenerator />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  {/* Protected Routes - Dosen */}
+                  <Route 
+                    path="/dosen/dashboard" 
+                    element={
+                      <PrivateRoute>
+                        <DosenDashboard />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/dosen/mahasiswa/:mahasiswaId/dokumen" 
+                    element={
+                      <PrivateRoute>
+                        <DosenMahasiswaDokumen />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/dosen/dokumen/:dokumenId" 
+                    element={
+                      <PrivateRoute>
+                        <DosenDokumenDetail />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/dosen/mahasiswa-management" 
+                    element={
+                      <PrivateRoute>
+                        <DosenMahasiswaManagement />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  {/* Mahasiswa Routes */}
+                  <Route 
+                    path="/mahasiswa/pilih-dosen" 
+                    element={
+                      <PrivateRoute>
+                        <MahasiswaDosenSelection />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/mahasiswa/dosen-selection" 
+                    element={
+                      <PrivateRoute>
+                        <PilihPembimbing />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/mahasiswa/dosen-pembimbing" 
+                    element={
+                      <PrivateRoute>
+                        <DosenPembimbingSaya />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  {/* Dosen Routes - Request Bimbingan */}
+                  <Route 
+                    path="/dosen/request-bimbingan" 
+                    element={
+                      <PrivateRoute>
+                        <DosenRequestBimbingan />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/dosen/mahasiswa" 
+                    element={
+                      <PrivateRoute>
+                        <DosenRequestBimbingan />
+                      </PrivateRoute>
+                    } 
+                  />
+
+                  <Route 
+                    path="/dosen/draft-review" 
+                    element={
+                      <PrivateRoute>
+                        <DosenDrafting />
+                      </PrivateRoute>
+                    } 
+                  />
 
                   {/* Default Redirect - Smart based on role */}
                   <Route path="/" element={<RootRedirect />} />

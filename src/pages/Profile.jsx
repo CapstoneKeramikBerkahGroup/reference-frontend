@@ -10,9 +10,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { User, Mail, Lock, Save, AlertCircle, CheckCircle2, Edit2, Shield } from 'lucide-react';
+import { User, Mail, Lock, Save, AlertCircle, CheckCircle2, Edit2, Shield, Trash2, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'sonner';
+
+// --- OPTIONS PEMINATAN ---
+const SPECIALIZATIONS = [
+  { value: 'EISD', label: 'EISD - Enterprise Information System Development' },
+  { value: 'EDM', label: 'EDM - Enterprise Data Management' },
+  { value: 'EIM', label: 'EIM - Enterprise Information Management' },
+  { value: 'ERP', label: 'ERP - Enterprise Resource Planning' },
+  { value: 'SAG', label: 'SAG - System Analysis and Governance' },
+];
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -30,7 +39,7 @@ const Profile = () => {
   const [editForm, setEditForm] = useState({
     nama: '',
     email: '',
-    bidang_keahlian: ''
+    bidang_keahlian: '' 
   });
   
   // Change password
@@ -41,6 +50,10 @@ const Profile = () => {
     confirmPassword: ''
   });
 
+  // Delete Account State
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     fetchUserData();
   }, []);
@@ -50,21 +63,23 @@ const Profile = () => {
       setLoading(true);
       setError('');
       
-      // Get current user from localStorage
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       setUser(currentUser);
       
-      // Fetch full user data from API
       const response = await api.get('/auth/me');
-      console.log('Profile data:', response.data);
-      console.log('Dosen data:', response.data.dosen);
       setProfileData(response.data);
       
-      // Initialize edit form
+      // LOGIKA PENGAMBILAN DATA (Sudah Benar disini)
+      const userSpecialization = 
+        response.data.dosen?.bidang_keahlian || 
+        response.data.mahasiswa?.bidang_keahlian || 
+        response.data.bidang_keahlian || 
+        '';
+
       setEditForm({
         nama: response.data.nama || '',
         email: response.data.email || '',
-        bidang_keahlian: response.data.dosen?.bidang_keahlian || response.data.bidang_keahlian || ''
+        bidang_keahlian: userSpecialization
       });
     } catch (err) {
       console.error('Failed to fetch user data:', err);
@@ -74,13 +89,26 @@ const Profile = () => {
     }
   };
 
+  // --- HELPER: Mengambil Label Peminatan ---
+  const getSpecializationLabel = (code) => {
+    if (!code) return '-';
+    const spec = SPECIALIZATIONS.find(s => s.value === code);
+    return spec ? spec.label : code; // Jika match return label, jika tidak return kode aslinya
+  };
+
   const handleEditToggle = () => {
     if (isEditing) {
-      // Cancel edit - reset form
+      // Reset form jika batal
+      const userSpecialization = 
+        profileData.dosen?.bidang_keahlian || 
+        profileData.mahasiswa?.bidang_keahlian || 
+        profileData.bidang_keahlian || 
+        '';
+
       setEditForm({
         nama: profileData.nama || '',
         email: profileData.email || '',
-        bidang_keahlian: profileData.dosen?.bidang_keahlian || profileData.bidang_keahlian || ''
+        bidang_keahlian: userSpecialization
       });
     }
     setIsEditing(!isEditing);
@@ -94,7 +122,6 @@ const Profile = () => {
       setError('');
       setSuccess('');
       
-      // Validate
       if (!editForm.nama.trim()) {
         setError('Name is required');
         return;
@@ -104,28 +131,31 @@ const Profile = () => {
         return;
       }
       
-      // Update profile - include bidang_keahlian if user is dosen
       const updateData = {
         nama: editForm.nama.trim(),
         email: editForm.email.trim()
       };
       
-      // Add bidang_keahlian if user is dosen
-      if (user?.role === 'dosen' && editForm.bidang_keahlian) {
+      // Update bidang keahlian untuk Dosen DAN Mahasiswa
+      if (editForm.bidang_keahlian) {
         updateData.bidang_keahlian = editForm.bidang_keahlian;
       }
       
       const response = await api.put('/auth/profile', updateData);
       
-      // Update local data
       setProfileData(response.data);
       
-      // Update localStorage
+      // Update local storage
+      const userSpecialization = 
+        response.data.dosen?.bidang_keahlian || 
+        response.data.mahasiswa?.bidang_keahlian || 
+        response.data.bidang_keahlian;
+
       const updatedUser = { 
         ...user, 
         nama: response.data.nama, 
         email: response.data.email,
-        bidang_keahlian: response.data.bidang_keahlian || response.data.dosen?.bidang_keahlian
+        bidang_keahlian: userSpecialization
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -143,48 +173,63 @@ const Profile = () => {
   };
 
   const handleChangePassword = async () => {
+    // ... (Kode sama seperti sebelumnya)
     try {
-      setSaving(true);
-      setError('');
-      
-      // Validate
-      if (!passwordForm.currentPassword) {
-        setError('Current password is required');
-        return;
+        setSaving(true);
+        setError('');
+        
+        if (!passwordForm.currentPassword) {
+          setError('Current password is required');
+          return;
+        }
+        if (!passwordForm.newPassword) {
+          setError('New password is required');
+          return;
+        }
+        if (passwordForm.newPassword.length < 6) {
+          setError('New password must be at least 6 characters');
+          return;
+        }
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+          setError('Passwords do not match');
+          return;
+        }
+        
+        await api.put('/auth/change-password', {
+          current_password: passwordForm.currentPassword,
+          new_password: passwordForm.newPassword
+        });
+        
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setPasswordDialog(false);
+        toast.success('Password changed successfully!');
+      } catch (err) {
+        console.error('Failed to change password:', err);
+        setError(err.response?.data?.detail || 'Failed to change password. Please check your current password.');
+        toast.error('Failed to change password');
+      } finally {
+        setSaving(false);
       }
-      if (!passwordForm.newPassword) {
-        setError('New password is required');
-        return;
-      }
-      if (passwordForm.newPassword.length < 6) {
-        setError('New password must be at least 6 characters');
-        return;
-      }
-      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-      
-      // Change password
-      await api.put('/auth/change-password', {
-        current_password: passwordForm.currentPassword,
-        new_password: passwordForm.newPassword
-      });
-      
-      // Reset form and close dialog
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-      setPasswordDialog(false);
-      toast.success('Password changed successfully!');
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setDeleting(true);
+      await api.delete('/auth/delete-account'); 
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      toast.success('Akun berhasil dihapus');
+      navigate('/login');
     } catch (err) {
-      console.error('Failed to change password:', err);
-      setError(err.response?.data?.detail || 'Failed to change password. Please check your current password.');
-      toast.error('Failed to change password');
+      console.error('Gagal menghapus akun:', err);
+      toast.error(err.response?.data?.detail || 'Gagal menghapus akun. Silakan coba lagi.');
+      setDeleteDialog(false);
     } finally {
-      setSaving(false);
+      setDeleting(false);
     }
   };
 
@@ -204,8 +249,14 @@ const Profile = () => {
     );
   }
 
+  // Helper untuk mengambil value peminatan saat ini (untuk display)
+  const currentSpecializationCode = 
+    profileData?.dosen?.bidang_keahlian || 
+    profileData?.mahasiswa?.bidang_keahlian || 
+    profileData?.bidang_keahlian;
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <Navbar />
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -306,33 +357,35 @@ const Profile = () => {
                 )}
               </div>
 
-              {/* Bidang Keahlian for Dosen */}
-              {user?.role === 'dosen' && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Bidang Keahlian / Peminatan</Label>
-                  {isEditing ? (
-                    <Select 
-                      value={editForm.bidang_keahlian} 
-                      onValueChange={(value) => setEditForm({ ...editForm, bidang_keahlian: value })}
-                    >
-                      <SelectTrigger className="border-cyan-200 focus:border-cyan-500">
-                        <SelectValue placeholder="Pilih peminatan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="EISD">EISD (Enterprise Information System Development)</SelectItem>
-                        <SelectItem value="EDM">EDM (Enterprise Data Management)</SelectItem>
-                        <SelectItem value="EIM">EIM (Enterprise Information Management)</SelectItem>
-                        <SelectItem value="ERP">ERP (Enterprise Resource Planning)</SelectItem>
-                        <SelectItem value="SAG">SAG (System Analysis & Governance)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <span className="text-gray-900">{profileData?.dosen?.bidang_keahlian || profileData?.bidang_keahlian || '-'}</span>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Field Bidang Keahlian / Peminatan */}
+              {/* Ini akan muncul untuk Dosen MAUPUN Mahasiswa */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Bidang Keahlian / Peminatan</Label>
+                {isEditing ? (
+                  <Select 
+                    value={editForm.bidang_keahlian} 
+                    onValueChange={(value) => setEditForm({ ...editForm, bidang_keahlian: value })}
+                  >
+                    <SelectTrigger className="border-cyan-200 focus:border-cyan-500">
+                      <SelectValue placeholder="Pilih peminatan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SPECIALIZATIONS.map((spec) => (
+                        <SelectItem key={spec.value} value={spec.value}>
+                          {spec.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <span className="text-gray-900 font-medium">
+                        {/* MENGGUNAKAN HELPER AGAR TAMPIL NAMA LENGKAP PEMINATAN */}
+                        {getSpecializationLabel(currentSpecializationCode)}
+                    </span>
+                  </div>
+                )}
+              </div>
 
               <Separator />
 
@@ -390,30 +443,6 @@ const Profile = () => {
                         <span className="text-gray-900">{profileData.dosen.jabatan || '-'}</span>
                       </div>
                     </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label className="text-sm font-medium text-gray-700">Bidang Keahlian / Peminatan</Label>
-                      {isEditing ? (
-                        <Select 
-                          value={editForm.bidang_keahlian} 
-                          onValueChange={(value) => setEditForm({ ...editForm, bidang_keahlian: value })}
-                        >
-                          <SelectTrigger className="border-cyan-200 focus:border-cyan-500">
-                            <SelectValue placeholder="Pilih peminatan" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="EISD">EISD (Enterprise Information System Development)</SelectItem>
-                            <SelectItem value="EDM">EDM (Enterprise Data Management)</SelectItem>
-                            <SelectItem value="EIM">EIM (Enterprise Information Management)</SelectItem>
-                            <SelectItem value="ERP">ERP (Enterprise Resource Planning)</SelectItem>
-                            <SelectItem value="SAG">SAG (System Analysis & Governance)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <span className="text-gray-900">{profileData.dosen.bidang_keahlian || '-'}</span>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </>
               )}
@@ -435,8 +464,8 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Security Card */}
-        <Card className="border-cyan-200">
+        {/* Security Card & Danger Zone (Sama seperti sebelumnya) */}
+        <Card className="border-cyan-200 mb-6">
           <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50">
             <CardTitle className="text-xl">Pengaturan Keamanan</CardTitle>
             <CardDescription>Kelola kata sandi dan keamanan akun Anda</CardDescription>
@@ -530,6 +559,64 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* --- DANGER ZONE (HAPUS AKUN) --- */}
+        <Card className="border-red-200 overflow-hidden">
+          <CardHeader className="bg-red-50">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <CardTitle className="text-xl text-red-800">Danger Zone</CardTitle>
+            </div>
+            <CardDescription className="text-red-600">
+              Tindakan di sini bersifat permanen dan tidak dapat dibatalkan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900">Hapus Akun</h3>
+                <p className="text-sm text-gray-600">
+                  Menghapus akun Anda secara permanen beserta semua data yang terkait.
+                </p>
+              </div>
+              
+              <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Hapus Akun
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-red-600">
+                      <AlertTriangle className="w-5 h-5" />
+                      Konfirmasi Hapus Akun
+                    </DialogTitle>
+                    <DialogDescription>
+                      Apakah Anda yakin ingin menghapus akun ini secara permanen? 
+                      Tindakan ini <strong>tidak dapat dibatalkan</strong> dan semua data Anda akan hilang.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteDialog(false)} disabled={deleting}>
+                      Batal
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleDeleteAccount} 
+                      disabled={deleting}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {deleting ? 'Menghapus...' : 'Ya, Hapus Akun Saya'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ const MahasiswaDosenSelection = () => {
 
   useEffect(() => {
     fetchDosen();
+    fetchRequests();
   }, []);
 
   const fetchDosen = async () => {

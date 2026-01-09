@@ -112,6 +112,7 @@ export const nlpAPI = {
   generateIdeas: (data) => api.post('/nlp/generate-ideas', data),
 
   saveIdea: (data) => api.post('/nlp/ideas/save', data),
+  
   getIdeaHistory: () => api.get('/nlp/ideas/history'),
 };
 

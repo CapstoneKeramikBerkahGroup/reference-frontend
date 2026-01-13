@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,74 +18,82 @@ import {
   FileSearch,
   BarChart3,
   Shield,
-  Zap
+  Zap,
+  Languages
 } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'en' ? 'id' : 'en';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+  };
 
   const features = [
     {
       icon: <Brain className="w-8 h-8 text-cyan-600" />,
-      title: 'AI-Powered Analysis',
-      description: 'Analisis dokumen otomatis menggunakan kecerdasan buatan untuk mengekstrak ringkasan, kata kunci, dan referensi.'
+      title: t('home.feature1Title'),
+      description: t('home.feature1Description')
     },
     {
       icon: <Network className="w-8 h-8 text-blue-600" />,
-      title: 'Knowledge Graph',
-      description: 'Visualisasi jaringan pengetahuan untuk melihat hubungan antar dokumen penelitian Anda.'
+      title: t('home.feature2Title'),
+      description: t('home.feature2Description')
     },
     {
       icon: <Users className="w-8 h-8 text-cyan-600" />,
-      title: 'Bimbingan Online',
-      description: 'Sistem permintaan dan persetujuan pembimbing berbasis peminatan secara online dan terstruktur.'
+      title: t('home.feature3Title'),
+      description: t('home.feature3Description')
     },
     {
       icon: <FileSearch className="w-8 h-8 text-blue-600" />,
-      title: 'Reference Validation',
-      description: 'Validasi referensi oleh dosen pembimbing untuk memastikan kualitas sumber penelitian.'
+      title: t('home.feature4Title'),
+      description: t('home.feature4Description')
     },
     {
       icon: <BarChart3 className="w-8 h-8 text-cyan-600" />,
-      title: 'Progress Tracking',
-      description: 'Pantau perkembangan penelitian dengan statistik dan laporan komprehensif.'
+      title: t('home.feature5Title'),
+      description: t('home.feature5Description')
     },
     {
       icon: <Shield className="w-8 h-8 text-blue-600" />,
-      title: 'Secure & Private',
-      description: 'Data Anda aman dengan enkripsi dan sistem autentikasi yang terpercaya.'
+      title: t('home.feature6Title'),
+      description: t('home.feature6Description')
     }
   ];
 
   const howItWorks = [
     {
       step: '1',
-      title: 'Daftar & Login',
-      description: 'Buat akun sebagai mahasiswa atau dosen, pilih peminatan sesuai bidang keahlian Anda.'
+      title: t('home.step1Title'),
+      description: t('home.step1Description')
     },
     {
       step: '2',
-      title: 'Upload Dokumen',
-      description: 'Unggah dokumen penelitian Anda dalam format PDF untuk diproses oleh sistem.'
+      title: t('home.step2Title'),
+      description: t('home.step2Description')
     },
     {
       step: '3',
-      title: 'AI Processing',
-      description: 'Sistem akan menganalisis dokumen menggunakan AI untuk ekstraksi konten otomatis.'
+      title: t('home.step3Title'),
+      description: t('home.step3Description')
     },
     {
       step: '4',
-      title: 'Bimbingan & Review',
-      description: 'Dosen memberikan feedback, validasi referensi, dan bimbingan penelitian Anda.'
+      title: t('home.step4Title'),
+      description: t('home.step4Description')
     }
   ];
 
   const specializations = [
-    { name: 'EISD', full: 'Enterprise Information System Development', color: 'bg-cyan-100 text-cyan-700' },
-    { name: 'EDM', full: 'Enterprise Data Management', color: 'bg-blue-100 text-blue-700' },
-    { name: 'EIM', full: 'Enterprise Information Management', color: 'bg-indigo-100 text-indigo-700' },
-    { name: 'ERP', full: 'Enterprise Resource Planning', color: 'bg-purple-100 text-purple-700' },
-    { name: 'SAG', full: 'System Analysis & Governance', color: 'bg-pink-100 text-pink-700' }
+    { name: t('home.spec1Name'), full: t('home.spec1Full'), color: 'bg-cyan-100 text-cyan-700' },
+    { name: t('home.spec2Name'), full: t('home.spec2Full'), color: 'bg-blue-100 text-blue-700' },
+    { name: t('home.spec3Name'), full: t('home.spec3Full'), color: 'bg-indigo-100 text-indigo-700' },
+    { name: t('home.spec4Name'), full: t('home.spec4Full'), color: 'bg-purple-100 text-purple-700' },
+    { name: t('home.spec5Name'), full: t('home.spec5Full'), color: 'bg-pink-100 text-pink-700' }
   ];
 
   return (
@@ -108,18 +117,30 @@ const Home = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleLanguage}
+                className="text-gray-700 hover:text-cyan-600"
+                title={i18n.language === 'en' ? 'Switch to Indonesian' : 'Ganti ke Bahasa Inggris'}
+              >
+                <Languages className="h-5 w-5" />
+                <span className="ml-2 text-xs font-semibold">
+                  {i18n.language === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Button>
               <Button 
                 variant="ghost" 
                 onClick={() => navigate('/login')}
                 className="text-gray-700 hover:text-cyan-600"
               >
-                Masuk
+                {t('home.login')}
               </Button>
               <Button 
                 onClick={() => navigate('/register')}
                 className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white"
               >
-                Daftar Sekarang
+                {t('home.register')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -133,15 +154,14 @@ const Home = () => {
           <div className="space-y-6">
             <Badge className="bg-cyan-100 text-cyan-700 hover:bg-cyan-100 px-4 py-1.5 text-sm">
               <Sparkles className="w-4 h-4 mr-2" />
-              AI-Powered Research Platform
+              {t('home.badge')}
             </Badge>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-gray-900 leading-tight">
-              Kelola Penelitian Anda dengan
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600"> Lebih Cerdas</span>
+              {t('home.heroTitle')}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600">{t('home.heroTitleHighlight')}</span>
             </h1>
             <p className="text-lg text-gray-600 leading-relaxed">
-              Platform manajemen referensi berbasis AI yang membantu mahasiswa dan dosen dalam proses penelitian, 
-              dari analisis dokumen hingga bimbingan akademik.
+              {t('home.heroDescription')}
             </p>
             <div className="flex flex-wrap gap-4">
               <Button 
@@ -150,7 +170,7 @@ const Home = () => {
                 className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-8 py-6 text-lg"
               >
                 <GraduationCap className="mr-2 h-5 w-5" />
-                Mulai Gratis
+                {t('home.getStarted')}
               </Button>
               <Button 
                 size="lg"
@@ -159,7 +179,7 @@ const Home = () => {
                 className="border-2 border-cyan-600 text-cyan-600 hover:bg-cyan-50 px-8 py-6 text-lg"
               >
                 <UserCheck className="mr-2 h-5 w-5" />
-                Sudah Punya Akun
+                {t('home.login')}
               </Button>
             </div>
             <div className="flex items-center gap-6 pt-4">
@@ -220,13 +240,13 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1.5 mb-4">
-              Fitur Unggulan
+              {t('home.featuresBadge')}
             </Badge>
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-4">
-              Semua yang Anda Butuhkan dalam Satu Platform
+              {t('home.featuresTitle')}
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Dilengkapi dengan teknologi AI dan sistem manajemen bimbingan terintegrasi
+              {t('home.featuresSubtitle')}
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -251,13 +271,13 @@ const Home = () => {
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="text-center mb-12">
           <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 px-4 py-1.5 mb-4">
-            Cara Kerja
+            {t('home.howItWorksBadge')}
           </Badge>
           <h2 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-4">
-            Mudah dan Cepat Digunakan
+            {t('home.howItWorksTitle')}
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Empat langkah sederhana untuk memulai perjalanan penelitian Anda
+            {t('home.howItWorksSubtitle')}
           </p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -291,10 +311,10 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-white mb-4">
-              Peminatan yang Didukung
+              {t('home.specializationsTitle')}
             </h2>
             <p className="text-lg text-cyan-100 max-w-2xl mx-auto">
-              Sistem matching otomatis berdasarkan bidang keahlian dan peminatan
+              {t('home.specializationsSubtitle')}
             </p>
           </div>
           <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
@@ -319,10 +339,10 @@ const Home = () => {
         <Card className="bg-gradient-to-r from-cyan-600 to-blue-600 border-0 shadow-2xl">
           <CardContent className="p-12 text-center">
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-white mb-4">
-              Siap Memulai Perjalanan Penelitian Anda?
+              {t('home.ctaTitle')}
             </h2>
             <p className="text-lg text-cyan-100 mb-8 max-w-2xl mx-auto">
-              Bergabunglah dengan mahasiswa dan dosen Telkom University yang sudah menggunakan platform ini
+              {t('home.ctaDescription')}
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Button 
@@ -331,14 +351,14 @@ const Home = () => {
                 className="bg-white text-cyan-600 hover:bg-gray-100 px-8 py-6 text-lg font-semibold"
               >
                 <GraduationCap className="mr-2 h-5 w-5" />
-                Daftar Gratis Sekarang
+                {t('home.ctaRegister')}
               </Button>
               <Button 
                 size="lg"
                 onClick={() => navigate('/login')}
                 className="bg-white/20 backdrop-blur-sm border-2 border-white text-white hover:bg-white hover:text-cyan-600 px-8 py-6 text-lg font-semibold transition-all duration-300"
               >
-                Masuk ke Akun
+                {t('home.ctaLogin')}
               </Button>
             </div>
           </CardContent>
@@ -355,27 +375,27 @@ const Home = () => {
                 <span className="text-white font-semibold text-lg">ReferoAI</span>
               </div>
               <p className="text-sm text-gray-400">
-                Platform manajemen referensi berbasis AI untuk mahasiswa dan dosen Telkom University.
+                {t('home.footerDescription')}
               </p>
             </div>
             <div>
-              <h3 className="text-white font-semibold mb-4">Platform</h3>
+              <h3 className="text-white font-semibold mb-4">{t('home.footerPlatform')}</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Fitur</a></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Cara Kerja</a></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Peminatan</a></li>
+                <li><a href="#" className="hover:text-cyan-400 transition-colors">{t('home.footerFeatures')}</a></li>
+                <li><a href="#" className="hover:text-cyan-400 transition-colors">{t('home.footerHowItWorks')}</a></li>
+                <li><a href="#" className="hover:text-cyan-400 transition-colors">{t('home.footerSpecializations')}</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-white font-semibold mb-4">Bantuan</h3>
+              <h3 className="text-white font-semibold mb-4">{t('home.footerHelp')}</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">FAQ</a></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Panduan</a></li>
-                <li><a href="#" className="hover:text-cyan-400 transition-colors">Kontak</a></li>
+                <li><a href="#" className="hover:text-cyan-400 transition-colors">{t('home.footerFAQ')}</a></li>
+                <li><a href="#" className="hover:text-cyan-400 transition-colors">{t('home.footerGuide')}</a></li>
+                <li><a href="#" className="hover:text-cyan-400 transition-colors">{t('home.footerContact')}</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-white font-semibold mb-4">Kontak</h3>
+              <h3 className="text-white font-semibold mb-4">{t('home.footerContact')}</h3>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <span>📧</span>
@@ -393,7 +413,7 @@ const Home = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2025 Telkom University - S1 Sistem Informasi. All rights reserved.</p>
+            <p>{t('home.footerCopyright')}</p>
           </div>
         </div>
       </footer>

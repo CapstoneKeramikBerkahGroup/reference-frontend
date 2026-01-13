@@ -49,12 +49,24 @@ const Documents = () => {
 
   const loadDocuments = async () => {
     try {
+      console.log('🔍 Loading documents...');
       const response = await documentsAPI.getAll();
+      console.log('✅ Documents loaded:', response.data);
+      console.log('📊 Total documents:', response.data.length);
+      
+      // Debug: check zotero files
+      const zoteroFiles = response.data.filter(doc => doc.nama_file && doc.nama_file.startsWith('zotero_'));
+      console.log('📚 Zotero documents:', zoteroFiles.length);
+      console.log('Zotero files:', zoteroFiles);
+      
       setDocuments(response.data);
       setFilteredDocuments(response.data);
     } catch (err) {
+      console.error('❌ Failed to load documents:', err);
+      console.error('Error response:', err.response);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
       toast.error(t('messages.error.loadFailed'));
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -207,39 +219,16 @@ const Documents = () => {
     }
   };
 
-  const handleDownloadCompilation = async () => {
-    if (documents.length === 0) {
-      toast.warning(t('documents.noDocumentsToCompile'));
-      return;
-    }
-
-    try {
-      toast.info(t('documents.generatingCompilation'));
-      
-      const response = await documentsAPI.downloadCompilation();
-      
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `compilation_report_${new Date().toISOString().split('T')[0]}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
-      toast.success(t('documents.compilationSuccess'));
-    } catch (err) {
-      console.error('Compilation error:', err);
-      toast.error(err.response?.data?.detail || err.message || t('documents.compilationFailed'));
-    }
-  };
-
   const getStatusBadge = (status) => {
     switch (status) {
       case 'completed':
         return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">{t('documentDetail.status.completed')}</Badge>;
       case 'processing':
         return <Badge className="bg-cyan-100 text-cyan-700 hover:bg-cyan-100 border-cyan-200">{t('documentDetail.status.processing')}</Badge>;
+      case 'failed':
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200">{t('documentDetail.status.failed')}</Badge>;
+      case 'pending':
+        return <Badge variant="outline">{t('documentDetail.status.pending')}</Badge>;
       default:
         return <Badge variant="outline">{t('documentDetail.status.pending')}</Badge>;
     }
@@ -303,18 +292,6 @@ const Documents = () => {
               />
             </div>
 
-            {/* Download Compilation Button */}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleDownloadCompilation}
-              disabled={documents.length === 0}
-              className="h-11 border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              {t('documents.downloadCompilation')}
-            </Button>
-
             {/* Upload Document Button */}
             <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
               <DialogTrigger asChild>
@@ -323,7 +300,7 @@ const Documents = () => {
                   {t('documents.uploadDocument')}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md max-w-[95vw] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle className="font-serif">{t('documents.uploadTitle')}</DialogTitle>
                   <DialogDescription>
@@ -331,7 +308,7 @@ const Documents = () => {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-4">
+                <div className="space-y-4 py-4 overflow-x-hidden">
                   <div className="space-y-2">
                     <Label htmlFor="title">{t('documents.titleOptional')}</Label>
                     <Input
@@ -343,28 +320,65 @@ const Documents = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="files">{t('documents.selectFiles')}</Label>
-                    <div className="flex items-center justify-center w-full">
-                      <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 border-gray-300">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                              <p className="text-sm text-gray-500"><span className="font-semibold">{t('documents.clickToUpload')}</span> {t('documents.orDragDrop')}</p>
-                              <p className="text-xs text-gray-500">{t('documents.fileTypes')}</p>
-                          </div>
-                          <input 
-                              id="dropzone-file" 
-                              type="file" 
-                              className="hidden" 
-                              multiple
-                              accept=".pdf,.doc,.docx"
-                              onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
-                          />
-                      </label>
+                    <Label htmlFor="dropzone-file">{t('documents.selectFiles')}</Label>
+                    <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 border-gray-300 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
+                        <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                        <p className="text-sm text-gray-500 text-center px-2">
+                          <span className="font-semibold">{t('documents.clickToUpload')}</span> {t('documents.orDragDrop')}
+                        </p>
+                        <p className="text-xs text-gray-500">{t('documents.fileTypes')}</p>
+                      </div>
+                      <input 
+                        id="dropzone-file" 
+                        type="file" 
+                        className="hidden" 
+                        multiple
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          console.log('Files selected:', files);
+                          setUploadFiles(files);
+                        }}
+                      />
+                    </label>
+                    
+                    {/* Alternative: Direct Button to Trigger File Input */}
+                    <div className="flex justify-center mt-2">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => document.getElementById('dropzone-file')?.click()}
+                        className="border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {t('documents.browseFiles') || 'Browse Files'}
+                      </Button>
                     </div>
+                    
                     {uploadFiles.length > 0 && (
-                      <p className="text-sm text-green-600 font-medium mt-2">
-                        {uploadFiles.length} {t('documents.filesSelected')}
-                      </p>
+                      <div className="mt-3 space-y-2">
+                        <p className="text-sm font-medium text-gray-700">
+                          {uploadFiles.length} {t('documents.filesSelected')}:
+                        </p>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {uploadFiles.map((file, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-cyan-50 px-3 py-2 rounded text-xs min-w-0">
+                              <span className="truncate flex-1 min-w-0">{file.name}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setUploadFiles(prev => prev.filter((_, i) => i !== idx))}
+                                className="h-6 w-6 p-0 flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -373,7 +387,7 @@ const Documents = () => {
                   <Button
                     onClick={handleUpload}
                     disabled={uploading || uploadFiles.length === 0}
-                    className="w-full"
+                    className="w-full bg-cyan-600 hover:bg-cyan-700"
                   >
                     {uploading ? t('documents.uploading') : t('documents.startUpload')}
                   </Button>

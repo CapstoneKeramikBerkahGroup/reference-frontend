@@ -25,10 +25,17 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Jika 401, bersihkan token dan redirect ke login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Check if the error is from authentication endpoints (not Mendeley/Zotero)
+      const url = error.config?.url || '';
+      const isMendeleyError = url.includes('/mendeley') || url.includes('/integration');
+      const isZoteroError = url.includes('/zotero');
+      
+      // Only redirect to login if it's an auth error, not Mendeley/Zotero token issue
+      if (!isMendeleyError && !isZoteroError) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -88,11 +95,11 @@ export const documentsAPI = {
 
 // ============= TAGS API =============
 export const tagsAPI = {
-  getAll: () => api.get('/documents/tags'),
+  getAll: () => api.get('/documents/tags/all'),
   
   create: (name) => api.post('/documents/tags', { nama_tag: name }),
   
-  addToDocument: (documentId, tagId) => api.post(`/documents/doc/${documentId}/tags/${tagId}`),
+  addToDocument: (documentId, tagName) => api.post(`/documents/doc/${documentId}/tags`, { nama: tagName }),
   
   removeFromDocument: (documentId, tagId) => api.delete(`/documents/doc/${documentId}/tags/${tagId}`),
 };

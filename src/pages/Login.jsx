@@ -9,17 +9,24 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 // --- 2. Import Icons & Context ---
-import { BookOpen, AlertCircle, CheckCircle2, GraduationCap, UserCheck } from 'lucide-react';
+import { BookOpen, AlertCircle, CheckCircle2, GraduationCap, UserCheck, Languages } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CaptchaInput from '@/components/CaptchaInput';
+import CampusSlideshow from '@/components/CampusSlideshow';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { loginWithCaptcha } = useAuth();
-  const { t } = useLanguage();
+  const { t, i18n } = useTranslation();
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'en' ? 'id' : 'en';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+  };
 
   // --- 3. State Management ---
   const [role, setRole] = useState('mahasiswa'); // Default to mahasiswa
@@ -61,12 +68,12 @@ const Login = () => {
     
     // Validate CAPTCHA
     if (!captchaText || captchaText.length !== 6) {
-      setError('Please enter the CAPTCHA code');
+      setError(t('auth.enterCaptcha'));
       return;
     }
     
     if (!captchaSessionId) {
-      setError('CAPTCHA session expired. Please refresh.');
+      setError(t('auth.captchaExpired'));
       return;
     }
     
@@ -114,33 +121,56 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="h-screen bg-gradient-to-br from-gray-50 via-cyan-50 to-blue-50 flex items-center justify-center p-4 overflow-hidden">
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-6 items-center h-full max-h-[95vh]">
+        {/* Slideshow - Hidden on mobile */}
+        <div className="hidden lg:flex h-full items-center justify-center">
+          <div className="w-full h-[85vh] max-h-[650px]">
+            <CampusSlideshow />
+          </div>
+        </div>
+
+        {/* Login Form */}
+        <div className="w-full max-w-md mx-auto h-full flex flex-col justify-center">
         {/* Logo & Header */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-3">
           {/* University Logos */}
-          <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center gap-3 mb-2">
             <img 
               src="/images/logo fakultas rekayasa industri.webp" 
               alt="Fakultas Rekayasa Industri" 
-              className="h-12 sm:h-14 w-auto object-contain drop-shadow-lg"
+              className="h-10 w-auto object-contain drop-shadow-lg"
             />
             <img 
               src="/images/logo sistem informasi.png" 
               alt="Sistem Informasi" 
-              className="h-12 sm:h-14 w-auto object-contain drop-shadow-lg"
+              className="h-10 w-auto object-contain drop-shadow-lg"
             />
           </div>
           
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground mb-1">Refero</h1>
-          <p className="text-sm text-muted-foreground">{t('auth.aiResearchCompanion')}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{t('auth.telkomUniversity')}</p>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <h1 className="text-2xl font-serif font-bold text-foreground">Refero</h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleLanguage}
+              className="text-gray-700 hover:text-cyan-600 h-7 px-2"
+              title={i18n.language === 'en' ? 'Switch to Indonesian' : 'Ganti ke Bahasa Inggris'}
+            >
+              <Languages className="h-3.5 w-3.5 mr-1" />
+              <span className="text-xs font-semibold">
+                {i18n.language === 'en' ? 'EN' : 'ID'}
+              </span>
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">{t('auth.aiResearchCompanion')}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{t('auth.telkomUniversity')}</p>
         </div>
 
         <Card className="border-border/50 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-          <CardHeader className="space-y-1 text-center pb-4">
-            <CardTitle className="text-xl font-serif">{t('auth.welcomeBack')}</CardTitle>
-            <CardDescription className="text-sm">{t('auth.chooseRole')}</CardDescription>
+          <CardHeader className="space-y-1 text-center pb-3 pt-4">
+            <CardTitle className="text-lg font-serif">{t('auth.welcomeBack')}</CardTitle>
+            <CardDescription className="text-xs">{t('auth.chooseRole')}</CardDescription>
           </CardHeader>
           
           <CardContent className="pt-0">
@@ -161,31 +191,53 @@ const Login = () => {
 
             {/* Role Selection Tabs */}
             <Tabs value={role} onValueChange={setRole} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-3 h-10">
-                <TabsTrigger value="mahasiswa" className="flex items-center gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-                  <GraduationCap className="w-4 h-4" />
-                  <span className="font-medium">{t('auth.student')}</span>
+              <TabsList className="grid w-full grid-cols-2 mb-3 h-11 p-1 bg-gray-100/80 backdrop-blur-sm">
+                <TabsTrigger 
+                  value="mahasiswa" 
+                  className="flex items-center justify-center gap-2 rounded-md transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 hover:bg-gray-200/50"
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  <span className="font-semibold">{t('auth.student')}</span>
                 </TabsTrigger>
-                <TabsTrigger value="dosen" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
-                  <UserCheck className="w-4 h-4" />
-                  <span className="font-medium">{t('auth.lecturer')}</span>
+                <TabsTrigger 
+                  value="dosen" 
+                  className="flex items-center justify-center gap-2 rounded-md transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-green-500/50 hover:bg-gray-200/50"
+                >
+                  <UserCheck className="w-5 h-5" />
+                  <span className="font-semibold">{t('auth.lecturer')}</span>
                 </TabsTrigger>
               </TabsList>
 
-              {/* Info Text */}
+              {/* Info Text with enhanced styling */}
               <div className="mb-3 text-center">
-                <p className="text-xs text-muted-foreground">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300"
+                     style={{
+                       background: role === 'mahasiswa' 
+                         ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.15) 100%)'
+                         : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.15) 100%)',
+                       border: role === 'mahasiswa' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(34, 197, 94, 0.3)'
+                     }}>
                   {role === 'mahasiswa' ? (
-                    <>👨‍🎓 {t('auth.loggingInAs')} <span className="font-semibold text-blue-600">{t('auth.student')}</span></>
+                    <>
+                      <span className="text-2xl">👨‍🎓</span>
+                      <span className="text-sm">
+                        {t('auth.loggingInAs')} <span className="font-bold text-blue-600">{t('auth.student')}</span>
+                      </span>
+                    </>
                   ) : (
-                    <>👨‍🏫 {t('auth.loggingInAs')} <span className="font-semibold text-green-600">{t('auth.lecturer')}</span></>
+                    <>
+                      <span className="text-2xl">👨‍🏫</span>
+                      <span className="text-sm">
+                        {t('auth.loggingInAs')} <span className="font-bold text-green-600">{t('auth.lecturer')}</span>
+                      </span>
+                    </>
                   )}
-                </p>
+                </div>
               </div>
 
               {/* Login Form */}
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <TabsContent value="mahasiswa" className="mt-0 space-y-3">
+              <form onSubmit={handleSubmit} className="space-y-2.5">
+                <TabsContent value="mahasiswa" className="mt-0 space-y-2.5">
                   <div className="space-y-1.5">
                     <Label htmlFor="email" className="text-sm">{t('auth.studentEmail')}</Label>
                     <Input
@@ -224,7 +276,7 @@ const Login = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="dosen" className="mt-0 space-y-3">
+                <TabsContent value="dosen" className="mt-0 space-y-2.5">
                   <div className="space-y-2">
                     <Label htmlFor="email-dosen">{t('auth.lecturerEmail')}</Label>
                     <Input
@@ -242,12 +294,12 @@ const Login = () => {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password-dosen">Password</Label>
+                      <Label htmlFor="password-dosen">{t('auth.password')}</Label>
                       <Link 
                         to="/forgot-password" 
                         className="text-xs text-muted-foreground hover:text-primary transition-colors"
                       >
-                        Forgot password?
+                        {t('auth.forgotPassword')}
                       </Link>
                     </div>
                     <Input
@@ -270,7 +322,7 @@ const Login = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-9 text-sm font-medium mt-3"
+                  className="w-full h-9 text-sm font-medium mt-2.5"
                   disabled={loading}
                 >
                   {loading ? (
@@ -286,7 +338,7 @@ const Login = () => {
             </Tabs>
 
             {/* Register Link */}
-            <div className="mt-4 text-center">
+            <div className="mt-3 text-center">
               <p className="text-xs text-muted-foreground">
                 {t('auth.dontHaveAccount')}{' '}
                 <Link to="/register" className="text-primary hover:text-primary/80 font-semibold hover:underline">
@@ -297,9 +349,10 @@ const Login = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground/60 mt-4">
+        <p className="text-center text-xs text-muted-foreground/60 mt-3">
           © 2025 Refero. Telkom University Capstone Project. Keramik Berkah Group.
         </p>
+        </div>
       </div>
     </div>
   );

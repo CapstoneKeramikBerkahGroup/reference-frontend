@@ -104,7 +104,10 @@ const Dashboard = () => {
       setMendeleyDocuments(mendeleyDocs);
       setZoteroDocuments(zoteroDocs);
     } catch (err) {
-      toast.error('Failed to load documents');
+      console.error('❌ Load documents error:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      toast.error('Failed to load documents: ' + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
@@ -114,9 +117,12 @@ const Dashboard = () => {
     setLoadingRef(true);
     try {
       const response = await integrationAPI.getReferences();
-      setReferences(response.data || []);
+      console.log("📚 References response:", response.data);
+      const refs = response.data.data || response.data || [];
+      console.log("📊 Parsed references:", refs);
+      setReferences(refs);
     } catch (err) {
-      console.log("Zotero fetch error (User might not be connected)");
+      console.log("Zotero fetch error (User might not be connected):", err);
       setReferences([]);
     } finally {
       setLoadingRef(false);
@@ -127,7 +133,7 @@ const Dashboard = () => {
     try {
       // Check if config exists first
       const configResponse = await integrationAPI.getConfig();
-      const hasConfig = configResponse.data && configResponse.data.api_key && configResponse.data.user_id;
+      const hasConfig = configResponse.data && configResponse.data.id > 0 && configResponse.data.zotero_user_id;
       
       if (hasConfig) {
         // Only check references if config exists
@@ -136,7 +142,7 @@ const Dashboard = () => {
           setZoteroConnected(true);
           setZoteroStatus({ 
             connected: true,
-            count: refsResponse.data?.length || 0 
+            count: refsResponse.data?.total || refsResponse.data?.length || 0 
           });
         } catch (refErr) {
           // Config exists but can't fetch references
@@ -157,14 +163,18 @@ const Dashboard = () => {
   };
 
   const handleRefreshZotero = async () => {
+    console.log("🔄 Starting Zotero refresh...");
     try {
       setZoteroLoading(true);
       
       // Trigger sync to fetch from Zotero API
+      console.log("📡 Calling syncZotero API...");
       const syncResponse = await integrationAPI.syncZotero();
+      console.log("✅ Sync response:", syncResponse.data);
       const syncedCount = syncResponse.data?.synced_count || 0;
       
       // Reload references from database
+      console.log("📚 Loading references from database...");
       await loadZoteroReferences();
       await checkZoteroStatus();
       
@@ -174,7 +184,9 @@ const Dashboard = () => {
           : `Refreshed successfully! ${syncedCount} references found`
       );
     } catch (err) {
-      console.error('Zotero refresh error:', err);
+      console.error('❌ Zotero refresh error:', err);
+      console.error('❌ Error response:', err.response);
+      console.error('❌ Error data:', err.response?.data);
       
       // Check if token/config expired (401 Unauthorized)
       if (err.response?.status === 401) {
@@ -232,9 +244,10 @@ const Dashboard = () => {
 
     try {
       setZoteroLoading(true);
-      await integrationAPI.saveConfig({
+      await integrationAPI.connectZotero({
         api_key_zotero: zoteroApiKey,
-        user_id_zotero: zoteroUserId
+        user_id_zotero: zoteroUserId,
+        library_type: "user"
       });
       
       toast.success(language === 'id' ? 'Konfigurasi Zotero berhasil disimpan' : 'Zotero configuration saved successfully');
@@ -244,6 +257,7 @@ const Dashboard = () => {
       toast.info(language === 'id' ? 'Menyinkronkan library Zotero...' : 'Syncing Zotero library...');
       await handleRefreshZotero();
     } catch (err) {
+      console.error('Zotero config error:', err);
       toast.error(err.response?.data?.detail || (language === 'id' ? 'Gagal menyimpan konfigurasi' : 'Failed to save configuration'));
     } finally {
       setZoteroLoading(false);

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { translations } from '../locales/translations';
+import React, { createContext, useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const LanguageContext = createContext();
 
@@ -12,43 +12,20 @@ export const useLanguage = () => {
 };
 
 export const LanguageProvider = ({ children }) => {
-  // Get language from localStorage or default to 'id' (Indonesian)
-  const [language, setLanguage] = useState(() => {
-    const saved = localStorage.getItem('language');
-    return saved || 'id';
-  });
-
-  // Save to localStorage whenever language changes
-  useEffect(() => {
-    localStorage.setItem('language', language);
-  }, [language]);
+  const { t, i18n } = useTranslation();
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'en' ? 'id' : 'en');
-  };
-
-  const t = (key) => {
-    const keys = key.split('.');
-    let value = translations[language];
-    
-    for (const k of keys) {
-      value = value?.[k];
-      if (value === undefined) {
-        console.warn(`Translation key not found: ${key}`);
-        return key;
-      }
-    }
-    
-    return value;
+    const newLang = i18n.language === 'en' ? 'id' : 'en';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
   };
 
   const value = {
-    language,
-    setLanguage,
-    toggleLanguage,
     t,
-    isEnglish: language === 'en',
-    isIndonesian: language === 'id',
+    language: i18n.language,
+    toggleLanguage,
+    isEnglish: i18n.language === 'en',
+    isIndonesian: i18n.language === 'id',
   };
 
   return (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/Navbar';
 import PDFViewer from '@/components/PDFViewer';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   MessageSquare, Download, Send, Users, ChevronRight, 
-  FileText, Search, UserX, Quote, Reply, X, Trash2, Eye
+  FileText, Search, UserX, Quote, Reply, X, Trash2, Eye, Highlighter, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api, { dosenAPI } from '@/services/api';
@@ -16,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const DosenDrafting = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   
   // State Data
   const [mahasiswaList, setMahasiswaList] = useState([]);
@@ -120,6 +122,79 @@ const DosenDrafting = () => {
     }
   };
 
+  const handleDownloadDraft = async () => {
+    if (!selectedDraft) return;
+    
+    try {
+      toast.loading('Mengunduh draft...', { id: 'download' });
+      
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/drafts/download/${selectedDraft.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Download gagal');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedDraft.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('Draft berhasil diunduh!', { id: 'download' });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Gagal mengunduh draft', { id: 'download' });
+    }
+  };
+
+  const handleApproveDraft = async () => {
+    if (!selectedDraft) return;
+    
+    if (!window.confirm("Apakah Anda yakin draft ini sudah LAYAK dan TIDAK PERLU REVISI lagi?")) return;
+    
+    try {
+      toast.loading('Memproses...', { id: 'approve' });
+      await api.patch(`/drafts/${selectedDraft.id}/approve`);
+      
+      // Update local state
+      setSelectedDraft({ ...selectedDraft, status: 'approved' });
+      setDrafts(drafts.map(d => d.id === selectedDraft.id ? { ...d, status: 'approved' } : d));
+      
+      toast.success('✅ Draft disetujui! Mahasiswa tidak perlu revisi lagi.', { id: 'approve' });
+    } catch (error) {
+      console.error('Approve error:', error);
+      toast.error('Gagal menyetujui draft', { id: 'approve' });
+    }
+  };
+
+  const handleUnapproveDraft = async () => {
+    if (!selectedDraft) return;
+    
+    if (!window.confirm("Batalkan persetujuan? Draft akan kembali ke status reviewed.")) return;
+    
+    try {
+      toast.loading('Memproses...', { id: 'unapprove' });
+      await api.patch(`/drafts/${selectedDraft.id}/unapprove`);
+      
+      // Update local state
+      setSelectedDraft({ ...selectedDraft, status: 'reviewed' });
+      setDrafts(drafts.map(d => d.id === selectedDraft.id ? { ...d, status: 'reviewed' } : d));
+      
+      toast.info('Status dikembalikan ke reviewed', { id: 'unapprove' });
+    } catch (error) {
+      console.error('Unapprove error:', error);
+      toast.error('Gagal mengubah status', { id: 'unapprove' });
+    }
+  };
+
   const getCommentTree = () => {
     const map = {};
     const roots = [];
@@ -149,15 +224,15 @@ const DosenDrafting = () => {
           <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
             <UserX className="w-12 h-12 text-slate-400" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">Belum Ada Mahasiswa Bimbingan</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">{t('dosenDrafting.noDraftsYet')}</h2>
           <p className="text-slate-500 max-w-md mx-auto mb-8 leading-relaxed">
-            Anda belum memiliki mahasiswa bimbingan yang aktif. Silakan tinjau dan setujui permintaan bimbingan terlebih dahulu.
+            {t('dosenDrafting.selectDraft')}
           </p>
           <Button 
             onClick={() => window.location.href = '/dosen/request-bimbingan'}
             className="bg-blue-600 hover:bg-blue-700 shadow-lg px-8 py-6 text-base rounded-full"
           >
-            Cek Request Bimbingan
+            {t('dosenRequestBimbingan.viewRequest')}
           </Button>
         </div>
       </div>
@@ -178,7 +253,7 @@ const DosenDrafting = () => {
              <Card className="flex-1 flex flex-col overflow-hidden border-slate-200 shadow-sm">
                 <CardHeader className="pb-3 py-3 border-b bg-white sticky top-0 z-10">
                    <CardTitle className="text-sm flex items-center gap-2">
-                     <Users className="w-4 h-4"/> Pilih Mahasiswa ({mahasiswaList.length})
+                     <Users className="w-4 h-4"/> {t('dosenDrafting.studentDrafts')} ({mahasiswaList.length})
                    </CardTitle>
                 </CardHeader>
                 <ScrollArea className="flex-1 bg-slate-50/50">
@@ -228,11 +303,19 @@ const DosenDrafting = () => {
                                         ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-200 shadow-sm' 
                                         : 'bg-white hover:bg-slate-50 border-slate-200'}`}
                              >
-                                <div className="font-semibold text-slate-800">{draft.title}</div>
+                                <div className="flex justify-between items-start">
+                                  <div className="font-semibold text-slate-800">{draft.title}</div>
+                                  {draft.status === 'approved' && (
+                                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                                  )}
+                                </div>
                                 <div className="flex justify-between mt-1 text-xs text-slate-500">
                                    <span>v{draft.version}</span>
                                    <span>{new Date(draft.created_at).toLocaleDateString()}</span>
                                 </div>
+                                {draft.status === 'approved' && (
+                                  <div className="mt-1 text-[10px] text-green-600 font-bold">✓ LAYAK</div>
+                                )}
                              </div>
                           ))
                       )}
@@ -262,17 +345,54 @@ const DosenDrafting = () => {
               <div className="col-span-6 h-full flex flex-col min-h-0">
                 <Card className="flex-1 flex flex-col overflow-hidden border-slate-200 shadow-lg h-full animate-in zoom-in-95 duration-300">
                    <div className="bg-slate-800 text-white px-4 py-2 flex justify-between items-center shrink-0">
-                      <span className="text-sm font-medium truncate max-w-[300px]">
-                         {selectedDraft.title} - {selectedMahasiswa?.nama}
-                      </span>
-                      <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white h-7"
-                        onClick={() => window.open(selectedDraft.file_url, '_blank')}>
-                        <Download className="w-4 h-4 mr-2" /> Download
-                      </Button>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium truncate max-w-[250px]">
+                           {selectedDraft.title} - {selectedMahasiswa?.nama}
+                        </span>
+                        <div className="hidden lg:flex items-center gap-1.5 text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded border border-yellow-500/30">
+                          <Highlighter className="w-3 h-3" />
+                          <span>Seleksi teks untuk kutip</span>
+                        </div>
+                        {selectedDraft.status === 'approved' && (
+                          <div className="flex items-center gap-1 text-[10px] bg-green-500/20 text-green-300 px-2 py-1 rounded border border-green-500/30 font-bold">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>LAYAK / DISETUJUI</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {selectedDraft.status === 'approved' ? (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-orange-300 hover:text-orange-100 h-7 text-xs"
+                            onClick={handleUnapproveDraft}
+                          >
+                            <X className="w-3 h-3 mr-1" /> Batalkan Persetujuan
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-green-300 hover:text-green-100 h-7 text-xs font-bold"
+                            onClick={handleApproveDraft}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" /> Selesai Review / Layak
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-slate-300 hover:text-white h-7"
+                          onClick={handleDownloadDraft}
+                        >
+                          <Download className="w-4 h-4 mr-2" /> Download
+                        </Button>
+                      </div>
                    </div>
                    <div className="flex-1 bg-slate-100 relative overflow-hidden">
                       <PDFViewer 
-                        fileUrl={selectedDraft.file_url} 
+                        draftId={selectedDraft.id}
                         onTextSelect={onPDFTextSelect} 
                         activeHighlight={activeHighlight} 
                       />
@@ -312,14 +432,19 @@ const DosenDrafting = () => {
 
                                     {comment.quoted_text && (
                                        <div 
-                                          className="mb-2 pl-2 border-l-2 border-amber-400 bg-amber-50 p-1.5 rounded text-xs italic text-slate-600 cursor-pointer hover:bg-amber-100 transition-colors group"
+                                          className="mb-2 pl-2 border-l-4 border-yellow-400 bg-yellow-50 p-2 rounded text-xs italic text-slate-700 cursor-pointer hover:bg-yellow-100 transition-all hover:shadow-md group"
                                           onClick={() => handleJumpToPdf(comment)}
                                        >
-                                          <div className="flex items-center gap-1 text-amber-600 font-bold mb-0.5">
-                                             <Quote className="w-3 h-3" /> 
-                                             <span>Hal {comment.page_number}</span>
+                                          <div className="flex items-center gap-1 text-yellow-700 font-bold mb-1">
+                                             <Quote className="w-3.5 h-3.5" /> 
+                                             <span className="text-[11px] uppercase tracking-wide">📍 Halaman {comment.page_number}</span>
                                           </div>
-                                          "{comment.quoted_text.substring(0, 80)}..."
+                                          <div className="text-slate-700 font-medium">
+                                            "{comment.quoted_text.substring(0, 100)}{comment.quoted_text.length > 100 ? '...' : ''}"
+                                          </div>
+                                          <div className="text-[10px] text-yellow-600 mt-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                                            💡 Klik untuk lihat di PDF
+                                          </div>
                                        </div>
                                     )}
                                     

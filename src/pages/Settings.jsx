@@ -29,15 +29,16 @@ const Settings = () => {
   const fetchZoteroConfig = async () => {
     try {
       const res = await integrationAPI.getConfig();
+      console.log("Zotero Config Response:", res.data);
       // Cek apakah data valid (id > 0)
       if (res.data && res.data.id > 0) {
         setFormData({
           user_id_zotero: res.data.zotero_user_id || '', 
-          api_key_zotero: res.data.api_key || '' 
+          api_key_zotero: '' // Don't load API key for security
         });
       }
     } catch (err) {
-      console.log("Belum ada konfigurasi Zotero.");
+      console.log("Belum ada konfigurasi Zotero atau error:", err);
     }
   };
 
@@ -52,29 +53,54 @@ const Settings = () => {
 
   const handleConnect = async () => {
     // Validasi menggunakan key yang benar
+    console.log("🔍 Form Data:", formData);
+    console.log("🔍 User ID:", formData.user_id_zotero);
+    console.log("🔍 API Key:", formData.api_key_zotero ? "***PROVIDED***" : "EMPTY");
+    
     if (!formData.user_id_zotero || !formData.api_key_zotero) {
         toast.warning("Mohon isi User ID dan API Key Zotero.");
         return;
     }
 
     setLoading(true);
+    
+    const payload = {
+      user_id_zotero: formData.user_id_zotero.toString().trim(),
+      api_key_zotero: formData.api_key_zotero.trim(),
+      library_type: "user"
+    };
+    
+    console.log("📤 Sending payload:", { ...payload, api_key_zotero: "***HIDDEN***" });
+    
     try {
       // Panggil API
-      const res = await integrationAPI.connectZotero({
-        user_id_zotero: formData.user_id_zotero.toString().trim(),
-        api_key_zotero: formData.api_key_zotero.trim(),
-        library_type: "user"
-      });
+      const res = await integrationAPI.connectZotero(payload);
       
+      console.log("✅ Zotero Connect Response:", res.data);
       toast.success(res.data.message || "Berhasil terhubung ke Zotero!");
       
       // Auto-sync setelah connect
       handleSync();
 
     } catch (err) {
-      console.error("Zotero Connect Error:", err);
-      const msg = err.response?.data?.detail || "Gagal menghubungkan. Cek kredensial Anda.";
-      toast.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      console.error("❌ Zotero Connect Error Full:", err);
+      console.error("❌ Error Response:", err.response);
+      console.error("❌ Error Data:", err.response?.data);
+      console.error("❌ Error Status:", err.response?.status);
+      console.error("❌ Error Message:", err.message);
+      console.error("❌ Network Error:", err.code);
+      
+      let errorMsg = "Gagal menyimpan konfigurasi";
+      
+      if (err.response?.data?.detail) {
+        errorMsg = typeof err.response.data.detail === 'string' 
+          ? err.response.data.detail 
+          : JSON.stringify(err.response.data.detail);
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -161,7 +187,16 @@ const Settings = () => {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button onClick={handleConnect} disabled={loading} className="flex-1">
+              <Button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log("🔘 Button clicked!");
+                  handleConnect();
+                }} 
+                disabled={loading} 
+                className="flex-1"
+                type="button"
+              >
                 {loading ? "Connecting..." : <><Save className="w-4 h-4 mr-2"/> Save Connection</>}
               </Button>
               

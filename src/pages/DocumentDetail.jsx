@@ -44,6 +44,7 @@ const DocumentDetail = () => {
   const [newTagName, setNewTagName] = useState('');
   const [outline, setOutline] = useState(null);
   const [outlineLoading, setOutlineLoading] = useState(false);
+  const [outlineType, setOutlineType] = useState('thesis'); // 'thesis' or 'paper'
 
   // Active Tab State
   const [activeTab, setActiveTab] = useState("summary");
@@ -117,17 +118,22 @@ const DocumentDetail = () => {
     }
   };
 
-  // --- OUTLINE GENERATOR WITH LANGUAGE ---
+  // --- OUTLINE GENERATOR WITH LANGUAGE & TYPE ---
   const handleGenerateOutline = async () => {
     if (!document?.judul) return;
     setOutlineLoading(true);
     try {
       const res = await nlpAPI.generateOutline({ 
         title: document.judul,
-        language: language 
+        language: language,
+        outline_type: outlineType, // 'thesis' or 'paper'
+        dokumen_id: outlineType === 'paper' ? parseInt(id) : undefined // Send dokumen_id for paper outline
       });
       setOutline(res.data.data);
-      toast.success(language === 'en' ? 'Outline generated!' : 'Kerangka berhasil dibuat!');
+      const successMsg = outlineType === 'paper' 
+        ? (language === 'en' ? 'Paper outline generated!' : 'Kerangka paper berhasil dibuat!')
+        : (language === 'en' ? 'Thesis outline generated!' : 'Kerangka skripsi berhasil dibuat!');
+      toast.success(successMsg);
     } catch (err) {
       toast.error('Failed to generate outline');
     } finally {
@@ -167,12 +173,8 @@ const DocumentDetail = () => {
   const handleAddTag = async () => {
     if (!newTagName.trim()) return;
     try {
-      let tagId = allTags.find(t => t.nama_tag.toLowerCase() === newTagName.toLowerCase())?.id;
-      if (!tagId) {
-          toast.error("Tag not found. Please create it in settings first.");
-          return;
-      }
-      await tagsAPI.addToDocument(id, tagId);
+      // Backend akan get-or-create tag berdasarkan nama
+      await tagsAPI.addToDocument(id, newTagName.trim());
       await loadDocument();
       setNewTagName('');
       setTagDialogOpen(false);
@@ -297,7 +299,7 @@ const DocumentDetail = () => {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-sm">
         <div className="container mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="gap-2 text-slate-600">
+          <Button variant="ghost" onClick={() => navigate('/documents')} className="gap-2 text-slate-600">
             <ArrowLeft className="w-4 h-4" /> {language === 'en' ? 'Back' : 'Kembali'}
           </Button>
           <div className="flex gap-2">
@@ -380,14 +382,26 @@ const DocumentDetail = () => {
                    <CardHeader className="border-b border-slate-100 bg-slate-50/50 py-4 flex flex-row items-center justify-between">
                       <CardTitle className="text-base text-purple-800 flex items-center gap-2">
                          <ListChecks className="w-4 h-4"/>
-                         {language === 'en' ? 'Smart Thesis Outline' : 'Rekomendasi Struktur Bab'}
+                         {outline ? (
+                            outlineType === 'paper' 
+                              ? (language === 'en' ? 'Paper Outline (IMRaD)' : 'Kerangka Paper (IMRaD)')
+                              : (language === 'en' ? 'Thesis Outline (Chapters 1-3)' : 'Kerangka Skripsi (Bab 1-3)')
+                         ) : (
+                            language === 'en' ? 'Smart Outline Generator' : 'Generator Kerangka Cerdas'
+                         )}
                       </CardTitle>
                       
                       {outline && (
-                         <Button size="sm" variant="ghost" onClick={handleGenerateOutline} disabled={outlineLoading} className="h-8 text-purple-600 hover:bg-purple-50">
-                            <RefreshCw className={`w-3 h-3 mr-2 ${outlineLoading ? 'animate-spin' : ''}`}/>
-                            {language === 'en' ? 'Regenerate' : 'Generate Ulang'}
-                         </Button>
+                         <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setOutline(null)} className="h-8 text-slate-600 hover:bg-slate-50 border-slate-300">
+                               <ArrowLeft className="w-3 h-3 mr-2"/>
+                               {language === 'en' ? 'Change Type' : 'Ganti Tipe'}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={handleGenerateOutline} disabled={outlineLoading} className="h-8 text-purple-600 hover:bg-purple-50">
+                               <RefreshCw className={`w-3 h-3 mr-2 ${outlineLoading ? 'animate-spin' : ''}`}/>
+                               {language === 'en' ? 'Regenerate' : 'Generate Ulang'}
+                            </Button>
+                         </div>
                       )}
                    </CardHeader>
                    <CardContent className="pt-6">
@@ -396,17 +410,47 @@ const DocumentDetail = () => {
                             <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                <Brain className="w-8 h-8 text-purple-300"/>
                             </div>
-                            <p className="text-slate-500 mb-6 max-w-sm mx-auto">
+                            <p className="text-slate-500 mb-4 max-w-sm mx-auto">
                                {language === 'en' 
-                                  ? 'Generate a standardized thesis outline (Chapters 1-3) based on this document.' 
-                                  : 'Buat kerangka skripsi standar akademik (Bab 1-3) berdasarkan konten dokumen ini.'}
+                                  ? 'Generate a standardized outline based on this document.' 
+                                  : 'Buat kerangka standar akademik berdasarkan konten dokumen ini.'}
                             </p>
+                            
+                            {/* Outline Type Selector */}
+                            <div className="flex justify-center gap-3 mb-6">
+                               <Button
+                                  variant={outlineType === 'thesis' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setOutlineType('thesis')}
+                                  className={outlineType === 'thesis' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
+                               >
+                                  📘 {language === 'en' ? 'Thesis (Chapters 1-3)' : 'Skripsi (Bab 1-3)'}
+                               </Button>
+                               <Button
+                                  variant={outlineType === 'paper' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setOutlineType('paper')}
+                                  className={outlineType === 'paper' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
+                               >
+                                  📄 {language === 'en' ? 'Research Paper' : 'Paper Penelitian'}
+                               </Button>
+                            </div>
+                            
                             <Button onClick={handleGenerateOutline} disabled={outlineLoading} className="bg-purple-600 hover:bg-purple-700">
                                {outlineLoading ? 'Generating...' : (language === 'en' ? 'Generate Outline' : 'Buat Kerangka')}
                             </Button>
                          </div>
                       ) : (
                          <div className="space-y-6 animate-in fade-in duration-500">
+                            {/* Type Indicator Badge */}
+                            <div className="flex items-center justify-center gap-2 pb-2">
+                               <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 text-xs">
+                                  {outlineType === 'paper' 
+                                    ? (language === 'en' ? '📄 Research Paper Structure' : '📄 Struktur Paper Penelitian')
+                                    : (language === 'en' ? '📘 Thesis Structure (Chapters 1-3)' : '📘 Struktur Skripsi (Bab 1-3)')}
+                               </Badge>
+                            </div>
+                            
                             {/* Render outline secara rapi */}
                             {Object.entries(outline).map(([bab, items], idx) => (
                                <div key={idx} className="border border-slate-100 rounded-lg overflow-hidden">

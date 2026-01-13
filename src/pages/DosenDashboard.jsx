@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import api, { dosenAPI } from '@/services/api';
 import Navbar from '@/components/Navbar';
 
@@ -34,6 +35,7 @@ import {
 const DosenDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   
   const [stats, setStats] = useState(null);
   const [mahasiswaList, setMahasiswaList] = useState([]);
@@ -116,45 +118,45 @@ const DosenDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card className="border-border/50 hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Mahasiswa</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dosenDashboard.totalMahasiswa')}</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.total_mahasiswa || 0}</div>
-              <p className="text-xs text-muted-foreground">Under supervision</p>
+              <p className="text-xs text-muted-foreground">{t('dosenDashboard.underSupervision')}</p>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Dokumen</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dosenDashboard.totalDraftsTA')}</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_dokumen || 0}</div>
-              <p className="text-xs text-muted-foreground">Documents uploaded</p>
+              <div className="text-2xl font-bold">{stats?.total_drafts || 0}</div>
+              <p className="text-xs text-muted-foreground">{t('dosenDashboard.draftSubmissions')}</p>
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 hover:shadow-lg transition-shadow">
+          <Card className="border-border/50 hover:shadow-lg transition-shadow border-green-300 bg-green-50/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium">Mahasiswa Layak</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-green-700" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats?.dokumen_completed || 0}</div>
-              <p className="text-xs text-muted-foreground">Analysis done</p>
+              <div className="text-2xl font-bold text-green-700">{stats?.mahasiswa_approved || 0}</div>
+              <p className="text-xs text-green-700">{stats?.drafts_approved || 0} draft tidak perlu revisi</p>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">My Comments</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dosenDashboard.myComments')}</CardTitle>
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_catatan || 0}</div>
-              <p className="text-xs text-muted-foreground">Comments given</p>
+              <div className="text-2xl font-bold">{stats?.total_comments || 0}</div>
+              <p className="text-xs text-muted-foreground">{t('dosenDashboard.draftReviewComments')}</p>
             </CardContent>
           </Card>
 
@@ -163,14 +165,14 @@ const DosenDashboard = () => {
             onClick={() => navigate('/dosen/request-bimbingan')}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bimbingan Requests</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('dosenDashboard.bimbinganRequests')}</CardTitle>
               <UserCheck className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">{pendingRequests.length}</div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                Waiting for approval
+                {t('dosenDashboard.waitingForApproval')}
               </p>
             </CardContent>
           </Card>
@@ -184,7 +186,7 @@ const DosenDashboard = () => {
             className="rounded-b-none"
           >
             <TrendingUp className="w-4 h-4 mr-2" />
-            Overview
+            {t('dosenDashboard.overview')}
           </Button>
           <Button
             variant={activeTab === 'mahasiswa' ? 'default' : 'ghost'}
@@ -192,7 +194,7 @@ const DosenDashboard = () => {
             className="rounded-b-none"
           >
             <Users className="w-4 h-4 mr-2" />
-            Mahasiswa Bimbingan
+            {t('dosenDashboard.mahasiswaBimbingan')}
           </Button>
           <Button
             variant={activeTab === 'kelola' ? 'default' : 'ghost'}
@@ -200,7 +202,7 @@ const DosenDashboard = () => {
             className="rounded-b-none"
           >
             <Users className="w-4 h-4 mr-2" />
-            Kelola Mahasiswa
+            {t('dosenDashboard.kelolaMahasiswa')}
           </Button>
         </div>
 
@@ -214,10 +216,10 @@ const DosenDashboard = () => {
                 <AlertDescription className="flex items-center justify-between">
                   <div>
                     <span className="font-semibold text-red-900">
-                      {pendingRequests.length} mahasiswa menunggu approval bimbingan
+                      {pendingRequests.length} {t('dosenDashboard.alertPending')}
                     </span>
                     <p className="text-sm text-red-700 mt-1">
-                      Terdapat request bimbingan dari mahasiswa dengan peminatan yang sama dengan Anda
+                      {t('dosenDashboard.pendingRequests')}
                     </p>
                   </div>
                   <Button 
@@ -225,7 +227,7 @@ const DosenDashboard = () => {
                     className="bg-red-600 hover:bg-red-700"
                   >
                     <UserCheck className="h-4 w-4 mr-2" />
-                    Lihat Request
+                    {t('dosenDashboard.viewRequest')}
                   </Button>
                 </AlertDescription>
               </Alert>
@@ -236,8 +238,8 @@ const DosenDashboard = () => {
               {/* Recent Mahasiswa */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Mahasiswa Activity</CardTitle>
-                  <CardDescription>Latest document uploads from your students</CardDescription>
+                  <CardTitle>{t('dosenDashboard.recentMahasiswaActivity')}</CardTitle>
+                  <CardDescription>{t('dosenDashboard.latestDraftSubmissions')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {mahasiswaList.slice(0, 5).map((mhs) => (
@@ -246,16 +248,26 @@ const DosenDashboard = () => {
                         <p className="font-medium">{mhs.nama}</p>
                         <p className="text-sm text-muted-foreground">{mhs.nim} • {mhs.program_studi}</p>
                       </div>
-                      <div className="text-right">
-                        <Badge variant={mhs.total_dokumen > 0 ? 'default' : 'secondary'}>
-                          {mhs.total_dokumen} docs
+                      <div className="text-right flex gap-2">
+                        <Badge variant={mhs.total_drafts > 0 ? 'default' : 'secondary'}>
+                          {mhs.total_drafts || 0} {t('dosenDashboard.drafts')}
                         </Badge>
+                        {mhs.drafts_reviewed > 0 && (
+                          <Badge variant="outline" className="bg-green-50">
+                            {mhs.drafts_reviewed} {t('dosenDashboard.reviewed')}
+                          </Badge>
+                        )}
+                        {mhs.drafts_approved > 0 && (
+                          <Badge className="bg-green-600">
+                            ✓ {mhs.drafts_approved} Layak
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   ))}
                   {mahasiswaList.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      No students yet
+                      {t('dosenDashboard.noStudents')}
                     </p>
                   )}
                 </CardContent>
@@ -264,37 +276,37 @@ const DosenDashboard = () => {
               {/* Quick Stats */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Quick Statistics</CardTitle>
-                  <CardDescription>Overview of your supervision</CardDescription>
+                  <CardTitle>{t('dosenDashboard.quickStatistics')}</CardTitle>
+                  <CardDescription>{t('dosenDashboard.overviewOfSupervision')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Total Mahasiswa</span>
+                      <span className="text-sm">{t('dosenDashboard.totalMahasiswa')}</span>
                     </div>
                     <span className="font-bold">{stats?.total_mahasiswa || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Total Documents</span>
+                      <span className="text-sm">{t('dosenDashboard.totalDraftsTA')}</span>
                     </div>
-                    <span className="font-bold">{stats?.total_dokumen || 0}</span>
+                    <span className="font-bold">{stats?.total_drafts || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Completed Analysis</span>
+                      <span className="text-sm">Draft Layak</span>
                     </div>
-                    <span className="font-bold text-green-600">{stats?.dokumen_completed || 0}</span>
+                    <span className="font-bold text-green-600">{stats?.drafts_approved || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">My Comments</span>
+                      <span className="text-sm">{t('dosenDashboard.myComments')}</span>
                     </div>
-                    <span className="font-bold">{stats?.total_catatan || 0}</span>
+                    <span className="font-bold">{stats?.total_comments || 0}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -305,19 +317,20 @@ const DosenDashboard = () => {
         {activeTab === 'mahasiswa' && (
           <Card>
             <CardHeader>
-              <CardTitle>Mahasiswa Bimbingan</CardTitle>
-              <CardDescription>List of students under your supervision</CardDescription>
+              <CardTitle>{t('dosenDashboard.mahasiswaBimbinganList')}</CardTitle>
+              <CardDescription>{t('dosenDashboard.listOfStudents')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>NIM</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Program Studi</TableHead>
-                    <TableHead>Angkatan</TableHead>
-                    <TableHead className="text-center">Dokumen</TableHead>
-                    <TableHead className="text-center">Completed</TableHead>
+                    <TableHead>{t('dosenDashboard.nim')}</TableHead>
+                    <TableHead>{t('dosenDashboard.nama')}</TableHead>
+                    <TableHead>{t('dosenDashboard.programStudi')}</TableHead>
+                    <TableHead>{t('dosenDashboard.angkatan')}</TableHead>
+                    <TableHead className="text-center">{t('dosenDashboard.totalDraftsTA')}</TableHead>
+                    <TableHead className="text-center">{t('dosenDashboard.draftsReviewed')}</TableHead>
+                    <TableHead className="text-center">Draft Layak</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -328,11 +341,16 @@ const DosenDashboard = () => {
                       <TableCell>{mhs.program_studi}</TableCell>
                       <TableCell>{mhs.angkatan}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="secondary">{mhs.total_dokumen}</Badge>
+                        <Badge variant="secondary">{mhs.total_drafts || 0}</Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={mhs.dokumen_completed > 0 ? 'default' : 'outline'}>
-                          {mhs.dokumen_completed}
+                        <Badge variant={mhs.drafts_reviewed > 0 ? 'default' : 'outline'} className={mhs.drafts_reviewed > 0 ? 'bg-green-600' : ''}>
+                          {mhs.drafts_reviewed || 0}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={mhs.drafts_approved > 0 ? 'default' : 'outline'} className={mhs.drafts_approved > 0 ? 'bg-emerald-600' : ''}>
+                          {mhs.drafts_approved > 0 ? `✓ ${mhs.drafts_approved}` : '0'}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -343,7 +361,7 @@ const DosenDashboard = () => {
               {mahasiswaList.length === 0 && (
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No mahasiswa bimbingan yet</p>
+                  <p className="text-muted-foreground">{t('dosenDashboard.noStudents')}</p>
                 </div>
               )}
             </CardContent>
@@ -355,12 +373,12 @@ const DosenDashboard = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Kelola Mahasiswa Bimbingan</CardTitle>
-                  <CardDescription>Manage students under your supervision</CardDescription>
+                  <CardTitle>{t('dosenDashboard.kelolaMahasiswaBimbingan')}</CardTitle>
+                  <CardDescription>{t('dosenDashboard.manageStudents')}</CardDescription>
                 </div>
                 <Button onClick={() => navigate('/dosen/mahasiswa-management')}>
                   <Users className="w-4 h-4 mr-2" />
-                  Go to Management Page
+                  {t('dosenDashboard.goToManagementPage')}
                 </Button>
               </div>
             </CardHeader>
@@ -369,7 +387,7 @@ const DosenDashboard = () => {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Click the button above to access the full management page where you can add, edit, or remove students.
+                    {t('dosenDashboard.clickAbove')}
                   </AlertDescription>
                 </Alert>
                 
@@ -379,7 +397,7 @@ const DosenDashboard = () => {
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-muted-foreground">Total Mahasiswa</p>
+                          <p className="text-sm text-muted-foreground">{t('dosenDashboard.totalMahasiswa')}</p>
                           <p className="text-2xl font-bold">{stats?.total_mahasiswa || 0}</p>
                         </div>
                         <Users className="h-8 w-8 text-muted-foreground" />
@@ -391,8 +409,8 @@ const DosenDashboard = () => {
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-muted-foreground">Active Students</p>
-                          <p className="text-2xl font-bold">{mahasiswaList.filter(m => m.total_dokumen > 0).length}</p>
+                          <p className="text-sm text-muted-foreground">{t('dosenDashboard.activeDrafters')}</p>
+                          <p className="text-2xl font-bold">{mahasiswaList.filter(m => m.total_drafts > 0).length}</p>
                         </div>
                         <CheckCircle2 className="h-8 w-8 text-green-600" />
                       </div>
@@ -403,8 +421,8 @@ const DosenDashboard = () => {
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-muted-foreground">Total Documents</p>
-                          <p className="text-2xl font-bold">{stats?.total_dokumen || 0}</p>
+                          <p className="text-sm text-muted-foreground">{t('dosenDashboard.totalDraftsTA')}</p>
+                          <p className="text-2xl font-bold">{stats?.total_drafts || 0}</p>
                         </div>
                         <FileText className="h-8 w-8 text-muted-foreground" />
                       </div>
@@ -414,13 +432,19 @@ const DosenDashboard = () => {
 
                 {/* Recent Students List */}
                 <div className="pt-4">
-                  <h3 className="text-lg font-semibold mb-4">Recent Students</h3>
+                  <h3 className="text-lg font-semibold mb-4">{t('dosenDashboard.recentStudents')}</h3>
                   <div className="space-y-2">
                     {mahasiswaList.slice(0, 10).map((mhs) => (
                       <div key={mhs.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
                         <div className="flex-1">
                           <p className="font-medium">{mhs.nama}</p>
                           <p className="text-sm text-muted-foreground">{mhs.nim} • {mhs.program_studi}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary">{mhs.total_drafts || 0} {t('dosenDashboard.drafts')}</Badge>
+                          {mhs.drafts_reviewed > 0 && (
+                            <Badge variant="outline" className="bg-green-50">{mhs.drafts_reviewed} {t('dosenDashboard.reviewed')}</Badge>
+                          )}
                         </div>
                       </div>
                     ))}

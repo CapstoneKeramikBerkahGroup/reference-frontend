@@ -333,11 +333,11 @@ const Comparison = () => {
                                     <div className="flex items-start gap-3">
                                         <Checkbox 
                                             checked={isSelected}
-                                            className={`mt-1 ${isSelected ? 'data-[state=checked]:bg-blue-600 border-blue-600' : ''}`}
+                                            className={`mt-1 shrink-0 ${isSelected ? 'data-[state=checked]:bg-blue-600 border-blue-600' : ''}`}
                                         />
-                                        <div className="flex-1">
-                                            {/* JUDUL SAJA (Hanya ini yang diminta) */}
-                                            <h4 className={`font-semibold text-sm leading-snug ${isSelected ? 'text-blue-800' : 'text-slate-700'}`}>
+                                        <div className="flex-1 min-w-0">
+                                            {/* JUDUL dengan line-clamp agar tidak keluar */}
+                                            <h4 className={`font-semibold text-sm leading-snug line-clamp-3 ${isSelected ? 'text-blue-800' : 'text-slate-700'}`}>
                                                 {doc.judul}
                                             </h4>
                                         </div>

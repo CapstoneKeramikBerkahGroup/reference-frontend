@@ -72,7 +72,7 @@ const Navbar = () => {
   // --- MENU ITEMS ---
   const studentNavItems = [
     { path: '/dashboard', label: t('nav.dashboard'), icon: Home },
-    { path: '/idea-generator', label: 'Idea Synthesizer', icon: BrainCircuit }, // Fitur Baru
+    { path: '/idea-generator', label: t('nav.ideaSynthesizer'), icon: BrainCircuit },
     { path: '/documents', label: t('nav.documents'), icon: FileText },
     { path: '/visualization', label: t('nav.visualization'), icon: BarChart3 },
     { path: '/draft', label: t('nav.drafting'), icon: FileText },
@@ -80,9 +80,8 @@ const Navbar = () => {
 
   const lecturerNavItems = [
     { path: '/dosen/dashboard', label: t('nav.dashboard'), icon: Home },
-    { path: '/dosen/request-bimbingan', label: t('nav.requestBimbingan'), icon: UserCheck },
-    { path: '/dosen/mahasiswa', label: t('nav.students'), icon: Users },
-    { path: '/dosen/draft-review', label: 'Review Draft', icon: FileText },
+    { path: '/dosen/request-bimbingan', label: t('nav.manageBimbingan'), icon: UserCheck },
+    { path: '/dosen/draft-review', label: t('nav.reviewDraft'), icon: FileText },
   ];
 
   const navItems = user?.role === 'dosen' ? lecturerNavItems : studentNavItems;
@@ -110,13 +109,13 @@ const Navbar = () => {
               </Button>
 
               {/* Logo & Brand Identity */}
-              <Link to="/dashboard" className="flex items-center space-x-3 group">
+              <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-blue-500 rounded-xl blur-lg opacity-20 transition-opacity"></div>
                   <img
                     src="/images/logo sistem informasi.png"
                     alt="Sistem Informasi"
-                    className="relative h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
+                    className="relative h-10 sm:h-12 w-auto object-contain"
                   />
                 </div>
                 <div className="hidden sm:flex flex-col">
@@ -127,7 +126,7 @@ const Navbar = () => {
                     S1 Sistem Informasi
                   </span>
                 </div>
-              </Link>
+              </div>
 
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center ml-8 space-x-1">

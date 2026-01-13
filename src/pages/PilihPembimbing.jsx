@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import api from '@/services/api';
 const PilihPembimbing = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   const [dosenList, setDosenList] = useState([]);
   const [myRequests, setMyRequests] = useState([]);

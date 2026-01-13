@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import api from '@/services/api';
 
 const DosenRequestBimbingan = () => {
   const { user, refreshUser } = useAuth();
+  const { t } = useTranslation();
   
   const [requests, setRequests] = useState([]);
   const [myBimbingan, setMyBimbingan] = useState([]);
